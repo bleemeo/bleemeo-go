@@ -1,6 +1,10 @@
 package bleemeo
 
-import "encoding/json"
+import (
+	"bytes"
+	"encoding/json"
+	"io"
+)
 
 type (
 	Fields = []string
@@ -14,3 +18,16 @@ type (
 		Results  []json.RawMessage `json:"results"`
 	}
 )
+
+func readerFrom(body Body) (io.Reader, error) {
+	if body == nil {
+		return nil, nil
+	}
+
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.NewReader(data), nil
+}

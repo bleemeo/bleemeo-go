@@ -7,14 +7,16 @@ import (
 	"log"
 
 	"bleemeo"
-	"bleemeo/examples"
 )
 
 func main() {
-	username, password := examples.ParseArguments()
-	client := bleemeo.NewClient(bleemeo.WithCredentials(username, password))
+	client := bleemeo.NewClient(
+		bleemeo.WithCredentialsFromEnv(),
+		bleemeo.WithEndpoint("http://localhost:8000"),
+		bleemeo.WithOAuthClientID("5c31cbfc-254a-4fb9-822d-e55c681a3d4f"),
+	)
 
-	dashboard, err := client.Create(context.Background(), "dashboard", bleemeo.Body{"name": "My dashboard"})
+	dashboard, err := client.Create(context.Background(), bleemeo.Dashboard, bleemeo.Body{"name": "My dashboard"})
 	if err != nil {
 		log.Fatalln("Error creating dashboard:", err)
 	}

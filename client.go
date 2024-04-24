@@ -3,54 +3,141 @@ package bleemeo
 import (
 	"context"
 	"encoding/json"
-	"os"
+	"fmt"
+	"io"
+	"maps"
+	"net/http"
+	"net/url"
+	"slices"
+	"strconv"
+	"strings"
 )
 
 type Client struct {
 	username, password string
 	endpoint           string
+	oAuthClientID      string
+	client             *http.Client
+
+	authProvider authenticationProvider
 }
 
 func NewClient(opts ...ClientOption) *Client {
 	c := &Client{
-		username: os.Getenv("BLEEMEO_USER"),
-		password: os.Getenv("BLEEMEO_PASSWORD"),
-		endpoint: "api.bleemeo.com/v1",
+		endpoint: "https://api.bleemeo.com",
+		client:   new(http.Client),
 	}
 
 	for _, opt := range opts {
 		opt(c)
 	}
 
+	c.authProvider = newAuthProvider(c.endpoint, c.username, c.password, c.oAuthClientID)
+
 	return c
 }
 
 // Get the resource with the given id, with only the given fields, if not nil.
-func (c *Client) Get(ctx context.Context, resource, id string, fields []string) (json.RawMessage, error) {
-	return nil, nil
+func (c *Client) Get(ctx context.Context, resource, id string, fields Fields) (json.RawMessage, error) {
+	reqURI := fmt.Sprintf("%s/%s/", resource, id)
+	params := Params{"fields": strings.Join(fields, ",")}
+
+	return c.Do(ctx, http.MethodGet, reqURI, params, true, nil)
 }
 
 // List the resources that match given params at the given page, with the given page size.
 func (c *Client) GetPage(ctx context.Context, resource string, page, pageSize int, params Params) (ResultsPage, error) {
-	return ResultsPage{}, nil
+	params = maps.Clone(params) // avoid mutation of given params
+	params["page"] = strconv.Itoa(page)
+	params["page_size"] = strconv.Itoa(pageSize)
+
+	resp, err := c.Do(ctx, http.MethodGet, resource, params, true, nil)
+	if err != nil {
+		return ResultsPage{}, err
+	}
+
+	var resultPage ResultsPage
+
+	err = json.Unmarshal(resp, &resultPage)
+	if err != nil {
+		return ResultsPage{}, err
+	}
+
+	return resultPage, nil
 }
 
 // Iterate over resources that match given params.
 func (c *Client) Iterator(resource string, params Params) Iterator {
-	return nil
+	return newIterator(c, resource, params)
 }
 
 // Create a resource with the given body.
 func (c *Client) Create(ctx context.Context, resource string, body Body) (json.RawMessage, error) {
-	return nil, nil
+	bodyReader, err := readerFrom(body)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.Do(ctx, http.MethodPost, resource, nil, true, bodyReader)
 }
 
 // Update the resource with the given id, with the given body.
 func (c *Client) Update(ctx context.Context, resource, id string, body Body) (json.RawMessage, error) {
-	return nil, nil
+	bodyReader, err := readerFrom(body)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.Do(ctx, http.MethodPatch, fmt.Sprintf("%s/%s/", resource, id), nil, true, bodyReader)
 }
 
 // Delete the resource with the given id.
 func (c *Client) Delete(ctx context.Context, resource, id string) error {
-	return nil
+	reqURI := fmt.Sprintf("%s/%s/", resource, id)
+	_, err := c.Do(ctx, http.MethodDelete, reqURI, nil, true, nil)
+
+	return err
+}
+
+func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, authenticated bool, body io.Reader) (json.RawMessage, error) {
+	reqURL, err := url.JoinPath(c.endpoint, reqURI)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, reqURL, body)
+	if err != nil {
+		return nil, err
+	}
+
+	q := req.URL.Query()
+
+	for key, value := range params {
+		q.Set(key, value)
+	}
+
+	req.URL.RawQuery = q.Encode()
+
+	if authenticated {
+		err = c.authProvider.injectHeader(req)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	raw := make(json.RawMessage, 0, resp.ContentLength)
+
+	err = json.NewDecoder(resp.Body).Decode(&raw)
+	if err != nil {
+		return nil, err
+	}
+
+	return slices.Clip(raw), nil
 }

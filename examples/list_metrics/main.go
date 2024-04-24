@@ -7,14 +7,16 @@ import (
 	"log"
 
 	"bleemeo"
-	"bleemeo/examples"
 )
 
 func main() {
-	username, password := examples.ParseArguments()
-	client := bleemeo.NewClient(bleemeo.WithCredentials(username, password))
+	client := bleemeo.NewClient(
+		bleemeo.WithCredentialsFromEnv(),
+		bleemeo.WithEndpoint("http://localhost:8000"),
+		bleemeo.WithOAuthClientID("5c31cbfc-254a-4fb9-822d-e55c681a3d4f"),
+	)
 
-	iter := client.Iterator("metrics", bleemeo.Params{"fields": "id,label"})
+	iter := client.Iterator(bleemeo.Metric, bleemeo.Params{"fields": "id,label"})
 	count := 0
 
 	type metricType struct {
