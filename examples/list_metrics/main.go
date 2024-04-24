@@ -12,9 +12,9 @@ import (
 
 func main() {
 	username, password := examples.ParseArguments()
-	client := bleemeo.NewClient(username, password)
+	client := bleemeo.NewClient(bleemeo.WithCredentials(username, password))
 
-	iter := client.Iterator(context.Background(), "metrics", bleemeo.Params{"fields": "id,label"})
+	iter := client.Iterator("metrics", bleemeo.Params{"fields": "id,label"})
 	count := 0
 
 	type metricType struct {
@@ -22,7 +22,7 @@ func main() {
 		Label string `json:"label"`
 	}
 
-	for iter.Next() {
+	for iter.Next(context.Background()) {
 		var metricObj metricType
 
 		err := json.Unmarshal(iter.At(), &metricObj)
@@ -30,10 +30,9 @@ func main() {
 			log.Fatalln("Failed to unmarshal metric:", err)
 		}
 
-		count++
-
 		fmt.Println("->", metricObj)
 
+		count++
 		if count == 200 {
 			fmt.Println("Listing has at least 200 metrics, only the first 200 metrics are shown")
 

@@ -12,9 +12,9 @@ import (
 
 func main() {
 	username, password := examples.ParseArguments()
-	client := bleemeo.NewClient(username, password)
+	client := bleemeo.NewClient(bleemeo.WithCredentials(username, password))
 
-	resultPage, err := client.List(context.Background(), "widget", 1, 1, bleemeo.Params{"title": "My widget", "fields": "id"})
+	resultPage, err := client.GetPage(context.Background(), "widget", 1, 1, bleemeo.Params{"title": "My widget", "fields": "id"})
 	if err != nil {
 		log.Fatalln("Failed to fetch widget:", err)
 	}
@@ -33,7 +33,7 @@ func main() {
 		log.Fatalln("Error unmarshalling widget:", err)
 	}
 
-	widget, err := client.Update(context.Background(), "widget", widgetObj.ID, bleemeo.Body{"title": "This is my widget"}, bleemeo.Fields{"id", "title"})
+	widget, err := client.Update(context.Background(), "widget", widgetObj.ID, bleemeo.Body{"title": "This is my widget"})
 	if err != nil {
 		log.Fatalln("Failed to update widget:", err)
 	}

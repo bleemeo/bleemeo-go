@@ -12,9 +12,9 @@ import (
 
 func main() {
 	username, password := examples.ParseArguments()
-	client := bleemeo.NewClient(username, password)
+	client := bleemeo.NewClient(bleemeo.WithCredentials(username, password))
 
-	dashboard, err := client.Create(context.Background(), "dashboard", bleemeo.Body{"name": "My dashboard"}, bleemeo.Fields{"id", "name"})
+	dashboard, err := client.Create(context.Background(), "dashboard", bleemeo.Body{"name": "My dashboard"})
 	if err != nil {
 		log.Fatalln("Error creating dashboard:", err)
 	}
@@ -31,7 +31,7 @@ func main() {
 
 	fmt.Println("Successfully created dashboard:", dashboardObj)
 
-	widget, err := client.Create(context.Background(), "widget", bleemeo.Body{"dashboard": dashboardObj.ID, "name": "My widget"}, bleemeo.Fields{"id", "title"})
+	widget, err := client.Create(context.Background(), "widget", bleemeo.Body{"dashboard": dashboardObj.ID, "name": "My widget"})
 	if err != nil {
 		log.Fatalln("Error creating widget:", err)
 	}
