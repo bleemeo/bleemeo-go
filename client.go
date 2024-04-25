@@ -51,7 +51,7 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 
 	epURL, err := url.Parse(c.endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("can't parse endpoint URL: %w", err)
+		return nil, fmt.Errorf("invalid endpoint URL: %w", err)
 	}
 
 	c.epURL = epURL

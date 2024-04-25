@@ -16,7 +16,7 @@ func main() {
 		bleemeo.WithOAuthClientID("5c31cbfc-254a-4fb9-822d-e55c681a3d4f"),
 	)
 	if err != nil {
-		log.Fatalln("Failed to initialize client", err)
+		log.Fatalln("Failed to initialize client:", err)
 	}
 
 	dashboard, err := client.Create(context.Background(), bleemeo.Dashboard, bleemeo.Body{"name": "My dashboard"})
@@ -36,7 +36,7 @@ func main() {
 
 	fmt.Println("Successfully created dashboard:", dashboardObj)
 
-	widget, err := client.Create(context.Background(), bleemeo.Widget, bleemeo.Body{"dashboard": dashboardObj.ID, "title": "My widget", "graph": bleemeo.GraphEnum_Text})
+	widget, err := client.Create(context.Background(), bleemeo.Widget, bleemeo.Body{"dashboard": dashboardObj.ID, "title": "My widget", "graph": bleemeo.Graph_Text})
 	if err != nil {
 		log.Fatalln("Error creating widget:", err)
 	}

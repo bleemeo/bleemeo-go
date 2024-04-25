@@ -16,7 +16,7 @@ func main() {
 		bleemeo.WithOAuthClientID("5c31cbfc-254a-4fb9-822d-e55c681a3d4f"),
 	)
 	if err != nil {
-		log.Fatalln("Failed to initialize client", err)
+		log.Fatalln("Failed to initialize client:", err)
 	}
 
 	pageNumber, pageSize := 1, 1
