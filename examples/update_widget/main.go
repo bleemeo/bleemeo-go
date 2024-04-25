@@ -31,9 +31,9 @@ func main() {
 	}
 
 	var widgetObj struct {
-		ID    string `json:"id"`
-		Title string `json:"title"`
-		Graph int    `json:"graph"`
+		ID    string            `json:"id"`
+		Title string            `json:"title"`
+		Graph bleemeo.GraphEnum `json:"graph"`
 	}
 
 	err = json.Unmarshal(resultPage.Results[0], &widgetObj)
