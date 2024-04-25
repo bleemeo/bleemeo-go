@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"maps"
 	"net/http"
 )
 
@@ -24,7 +23,7 @@ func newIterator(c *Client, resource string, params Params) Iterator {
 	return &iterator{
 		c:        c,
 		resource: resource,
-		params:   maps.Clone(params),
+		params:   cloneMap(params),
 	}
 }
 

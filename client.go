@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"maps"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -55,7 +54,7 @@ func (c *Client) Get(ctx context.Context, resource, id string, fields Fields) (j
 
 // List the resources that match given params at the given page, with the given page size.
 func (c *Client) GetPage(ctx context.Context, resource string, page, pageSize int, params Params) (ResultsPage, error) {
-	params = maps.Clone(params) // avoid mutation of given params
+	params = cloneMap(params) // avoid mutation of given params
 	params["page"] = strconv.Itoa(page)
 	params["page_size"] = strconv.Itoa(pageSize)
 
