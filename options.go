@@ -39,3 +39,9 @@ func WithHTTPClient(client *http.Client) ClientOption {
 		c.client = client
 	}
 }
+
+func WithBleemeoAccountHeader(accountID string) ClientOption {
+	return func(c *Client) {
+		c.customHeaders["X-Bleemeo-Account"] = accountID
+	}
+}

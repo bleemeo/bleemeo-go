@@ -8,7 +8,6 @@ import (
 	"maps"
 	"net/http"
 	"net/url"
-	"slices"
 	"strconv"
 	"strings"
 )
@@ -18,6 +17,7 @@ type Client struct {
 	endpoint           string
 	oAuthClientID      string
 	client             *http.Client
+	customHeaders      map[string]string
 
 	epURL        *url.URL
 	authProvider authenticationProvider
@@ -25,8 +25,9 @@ type Client struct {
 
 func NewClient(opts ...ClientOption) (*Client, error) {
 	c := &Client{
-		endpoint: "https://api.bleemeo.com",
-		client:   new(http.Client),
+		endpoint:      "https://api.bleemeo.com",
+		client:        new(http.Client),
+		customHeaders: make(map[string]string),
 	}
 
 	for _, opt := range opts {
@@ -136,6 +137,10 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 		}
 	}
 
+	for header, value := range c.customHeaders {
+		req.Header.Set(header, value)
+	}
+
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -150,5 +155,5 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 		return nil, err
 	}
 
-	return slices.Clip(raw), nil
+	return raw, nil
 }
