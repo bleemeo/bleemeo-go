@@ -10,11 +10,14 @@ import (
 )
 
 func main() {
-	client := bleemeo.NewClient(
+	client, err := bleemeo.NewClient(
 		bleemeo.WithCredentialsFromEnv(),
 		bleemeo.WithEndpoint("http://localhost:8000"),
 		bleemeo.WithOAuthClientID("5c31cbfc-254a-4fb9-822d-e55c681a3d4f"),
 	)
+	if err != nil {
+		log.Fatalln("Failed to initialize client", err)
+	}
 
 	iter := client.Iterator(bleemeo.Metric, bleemeo.Params{"fields": "id,label"})
 	count := 0

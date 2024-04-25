@@ -19,10 +19,11 @@ type Client struct {
 	oAuthClientID      string
 	client             *http.Client
 
+	epURL        *url.URL
 	authProvider authenticationProvider
 }
 
-func NewClient(opts ...ClientOption) *Client {
+func NewClient(opts ...ClientOption) (*Client, error) {
 	c := &Client{
 		endpoint: "https://api.bleemeo.com",
 		client:   new(http.Client),
@@ -32,9 +33,15 @@ func NewClient(opts ...ClientOption) *Client {
 		opt(c)
 	}
 
+	epURL, err := url.Parse(c.endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("can't parse endpoint URL: %w", err)
+	}
+
+	c.epURL = epURL
 	c.authProvider = newAuthProvider(c.endpoint, c.username, c.password, c.oAuthClientID)
 
-	return c
+	return c, nil
 }
 
 // Get the resource with the given id, with only the given fields, if not nil.
@@ -51,7 +58,7 @@ func (c *Client) GetPage(ctx context.Context, resource string, page, pageSize in
 	params["page"] = strconv.Itoa(page)
 	params["page_size"] = strconv.Itoa(pageSize)
 
-	resp, err := c.Do(ctx, http.MethodGet, resource, params, true, nil)
+	resp, err := c.Do(ctx, http.MethodGet, resource+"/", params, true, nil)
 	if err != nil {
 		return ResultsPage{}, err
 	}
@@ -78,7 +85,7 @@ func (c *Client) Create(ctx context.Context, resource string, body Body) (json.R
 		return nil, err
 	}
 
-	return c.Do(ctx, http.MethodPost, resource, nil, true, bodyReader)
+	return c.Do(ctx, http.MethodPost, resource+"/", nil, true, bodyReader)
 }
 
 // Update the resource with the given id, with the given body.
@@ -100,12 +107,12 @@ func (c *Client) Delete(ctx context.Context, resource, id string) error {
 }
 
 func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, authenticated bool, body io.Reader) (json.RawMessage, error) {
-	reqURL, err := url.JoinPath(c.endpoint, reqURI)
+	reqURL, err := c.epURL.Parse(reqURI)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, reqURL, body)
+	req, err := http.NewRequestWithContext(ctx, method, reqURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -117,6 +124,10 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 	}
 
 	req.URL.RawQuery = q.Encode()
+
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 
 	if authenticated {
 		err = c.authProvider.injectHeader(req)

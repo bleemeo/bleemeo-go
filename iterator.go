@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
-	"net/url"
 )
 
 type Iterator interface {
@@ -24,7 +24,7 @@ func newIterator(c *Client, resource string, params Params) Iterator {
 	return &iterator{
 		c:        c,
 		resource: resource,
-		params:   params,
+		params:   maps.Clone(params),
 	}
 }
 
@@ -74,14 +74,7 @@ func (iter *iterator) fetchPage(ctx context.Context) (ok bool) {
 			return false
 		}
 
-		nextURL, err := url.Parse(iter.currentPage.Next) // TODO: extract cursor/page from the URI, taking it raw is too easy
-		if err != nil {
-			iter.err = fmt.Errorf("failed to parse next page URL: %w", err)
-
-			return false
-		}
-
-		reqURI = nextURL.RequestURI()
+		reqURI = iter.currentPage.Next
 	}
 
 	resp, err := iter.c.Do(ctx, http.MethodGet, reqURI, iter.params, true, nil)

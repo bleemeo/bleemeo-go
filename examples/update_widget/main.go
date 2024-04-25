@@ -10,13 +10,18 @@ import (
 )
 
 func main() {
-	client := bleemeo.NewClient(
+	client, err := bleemeo.NewClient(
 		bleemeo.WithCredentialsFromEnv(),
 		bleemeo.WithEndpoint("http://localhost:8000"),
 		bleemeo.WithOAuthClientID("5c31cbfc-254a-4fb9-822d-e55c681a3d4f"),
 	)
+	if err != nil {
+		log.Fatalln("Failed to initialize client", err)
+	}
 
-	resultPage, err := client.GetPage(context.Background(), bleemeo.Widget, 1, 1, bleemeo.Params{"title": "My widget", "fields": "id"})
+	pageNumber, pageSize := 1, 1
+
+	resultPage, err := client.GetPage(context.Background(), bleemeo.Widget, pageNumber, pageSize, bleemeo.Params{"title": "My widget", "fields": "id"})
 	if err != nil {
 		log.Fatalln("Failed to fetch widget:", err)
 	}
@@ -28,6 +33,7 @@ func main() {
 	var widgetObj struct {
 		ID    string `json:"id"`
 		Title string `json:"title"`
+		Graph int    `json:"graph"`
 	}
 
 	err = json.Unmarshal(resultPage.Results[0], &widgetObj)

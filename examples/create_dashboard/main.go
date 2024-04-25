@@ -10,11 +10,14 @@ import (
 )
 
 func main() {
-	client := bleemeo.NewClient(
+	client, err := bleemeo.NewClient(
 		bleemeo.WithCredentialsFromEnv(),
 		bleemeo.WithEndpoint("http://localhost:8000"),
 		bleemeo.WithOAuthClientID("5c31cbfc-254a-4fb9-822d-e55c681a3d4f"),
 	)
+	if err != nil {
+		log.Fatalln("Failed to initialize client", err)
+	}
 
 	dashboard, err := client.Create(context.Background(), bleemeo.Dashboard, bleemeo.Body{"name": "My dashboard"})
 	if err != nil {
@@ -33,7 +36,7 @@ func main() {
 
 	fmt.Println("Successfully created dashboard:", dashboardObj)
 
-	widget, err := client.Create(context.Background(), "widget", bleemeo.Body{"dashboard": dashboardObj.ID, "name": "My widget"})
+	widget, err := client.Create(context.Background(), bleemeo.Widget, bleemeo.Body{"dashboard": dashboardObj.ID, "title": "My widget", "graph": "8"})
 	if err != nil {
 		log.Fatalln("Error creating widget:", err)
 	}
@@ -41,6 +44,7 @@ func main() {
 	var widgetObj struct {
 		ID    string `json:"id"`
 		Title string `json:"title"`
+		Graph int    `json:"graph"`
 	}
 
 	err = json.Unmarshal(widget, &widgetObj)
