@@ -16,78 +16,78 @@
 
 package bleemeo
 
-type AgentTypeEnum string
+type AgentTypeType string
 
 const (
-	AgentType_AWS_Account        AgentTypeEnum = "aws_account"
-	AgentType_AWS_TrustedAdvisor AgentTypeEnum = "aws_trusted_advisor"
-	AgentType_AWS_DynamoDB       AgentTypeEnum = "aws_dynamodb"
-	AgentType_AWS_EC2            AgentTypeEnum = "aws_ec2"
-	AgentType_AWS_ELB            AgentTypeEnum = "aws_elb"
-	AgentType_AWS_RDS            AgentTypeEnum = "aws_rds"
-	AgentType_AWS_S3             AgentTypeEnum = "aws_s3"
-	AgentType_Agent              AgentTypeEnum = "agent"
-	AgentType_Monitor            AgentTypeEnum = "connection_check"
-	AgentType_Snmp               AgentTypeEnum = "snmp"
-	AgentType_K8s                AgentTypeEnum = "kubernetes"
-	AgentType_vSphereCluster     AgentTypeEnum = "vsphere_cluster"
-	AgentType_vSphereHost        AgentTypeEnum = "vsphere_host"
-	AgentType_vSphereVM          AgentTypeEnum = "vsphere_vm"
+	AgentType_AWS_Account        AgentTypeType = "aws_account"
+	AgentType_AWS_TrustedAdvisor AgentTypeType = "aws_trusted_advisor"
+	AgentType_AWS_DynamoDB       AgentTypeType = "aws_dynamodb"
+	AgentType_AWS_EC2            AgentTypeType = "aws_ec2"
+	AgentType_AWS_ELB            AgentTypeType = "aws_elb"
+	AgentType_AWS_RDS            AgentTypeType = "aws_rds"
+	AgentType_AWS_S3             AgentTypeType = "aws_s3"
+	AgentType_Agent              AgentTypeType = "agent"
+	AgentType_Monitor            AgentTypeType = "connection_check"
+	AgentType_Snmp               AgentTypeType = "snmp"
+	AgentType_K8s                AgentTypeType = "kubernetes"
+	AgentType_vSphereCluster     AgentTypeType = "vsphere_cluster"
+	AgentType_vSphereHost        AgentTypeType = "vsphere_host"
+	AgentType_vSphereVM          AgentTypeType = "vsphere_vm"
 )
 
-type DisconnectionReasonEnum int
+type DisconnectionReasonType int
 
 const (
-	DisconnectionReason_CleanShutdown    DisconnectionReasonEnum = 1
-	DisconnectionReason_AgentTimeout     DisconnectionReasonEnum = 2
-	DisconnectionReason_AgentAutoUpgrade DisconnectionReasonEnum = 3
-	DisconnectionReason_AgentUpgrade     DisconnectionReasonEnum = 4
+	DisconnectionReason_CleanShutdown    DisconnectionReasonType = 1
+	DisconnectionReason_AgentTimeout     DisconnectionReasonType = 2
+	DisconnectionReason_AgentAutoUpgrade DisconnectionReasonType = 3
+	DisconnectionReason_AgentUpgrade     DisconnectionReasonType = 4
 )
 
-type GloutonDiagnosticEnum int
+type GloutonDiagnosticType int
 
 const (
-	Type_Crash    GloutonDiagnosticEnum = 0
-	Type_OnDemand GloutonDiagnosticEnum = 1
+	GloutonDiagnostic_Crash    GloutonDiagnosticType = 0
+	GloutonDiagnostic_OnDemand GloutonDiagnosticType = 1
 )
 
-type GraphEnum int
+type GraphType int
 
 const (
-	Graph_Line                 GraphEnum = 0
-	Graph_Stack                GraphEnum = 1
-	Graph_Pie                  GraphEnum = 2
-	Graph_Gauge                GraphEnum = 3
-	Graph_AvailabilityTimeline GraphEnum = 4
-	Graph_Number               GraphEnum = 5
-	Graph_Status               GraphEnum = 6
-	Graph_SnmpStatus           GraphEnum = 7
-	Graph_Text                 GraphEnum = 8
-	Graph_Image                GraphEnum = 9
-	Graph_HeatmapStatus        GraphEnum = 10
-	Graph_Bar                  GraphEnum = 11
+	Graph_Line                 GraphType = 0
+	Graph_Stack                GraphType = 1
+	Graph_Pie                  GraphType = 2
+	Graph_Gauge                GraphType = 3
+	Graph_AvailabilityTimeline GraphType = 4
+	Graph_Number               GraphType = 5
+	Graph_Status               GraphType = 6
+	Graph_SnmpStatus           GraphType = 7
+	Graph_Text                 GraphType = 8
+	Graph_Image                GraphType = 9
+	Graph_HeatmapStatus        GraphType = 10
+	Graph_Bar                  GraphType = 11
 )
 
-type ReportPeriodEnum int
+type ReportPeriodType int
 
 const (
-	ReportPeriod_Weekly  ReportPeriodEnum = 0
-	ReportPeriod_Monthly ReportPeriodEnum = 1
+	ReportPeriod_Weekly  ReportPeriodType = 0
+	ReportPeriod_Monthly ReportPeriodType = 1
 )
 
-type ReportIncludedEnum int
+type ReportIncludedType int
 
 const (
-	ReportIncluded_None    ReportIncludedEnum = 0
-	ReportIncluded_Partial ReportIncludedEnum = 1
-	ReportIncluded_Full    ReportIncludedEnum = 2
+	ReportIncluded_None    ReportIncludedType = 0
+	ReportIncluded_Partial ReportIncludedType = 1
+	ReportIncluded_Full    ReportIncludedType = 2
 )
 
-type StatusEnum int
+type StatusType int
 
 const (
-	Status_Ok       StatusEnum = 0
-	Status_Warning  StatusEnum = 1
-	Status_Critical StatusEnum = 2
-	Status_Unknown  StatusEnum = 3
+	Status_Ok       StatusType = 0
+	Status_Warning  StatusType = 1
+	Status_Critical StatusType = 2
+	Status_Unknown  StatusType = 3
 )
