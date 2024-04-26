@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	"bleemeo"
+	"github.com/bleemeo/bleemeo"
 )
 
 func main() {
@@ -46,6 +46,7 @@ func main() {
 	}
 
 	if err := iter.Err(); err != nil {
+		if apiErr := new(bleemeo.APIError); errors.As(err, &apiErr) {
 		log.Fatalln("Iteration error:", err)
 	}
 

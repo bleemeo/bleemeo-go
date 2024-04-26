@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	"bleemeo"
+	"github.com/bleemeo/bleemeo"
 )
 
 func main() {
