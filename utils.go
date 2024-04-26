@@ -20,19 +20,49 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"log"
 )
 
-func readerFrom(body Body) (io.Reader, error) {
+// jsonReaderFrom marshals the given content to JSON,
+// and returns a reader to the marshaled data.
+func jsonReaderFrom(body Body) (io.Reader, error) {
 	if body == nil {
 		return nil, nil
 	}
 
 	data, err := json.Marshal(body)
 	if err != nil {
-		return nil, err
+		return nil, &JsonMarshalError{
+			jsonError: jsonError{
+				DataKind: "request body",
+				Data:     body,
+				Err:      err,
+			},
+		}
 	}
 
 	return bytes.NewReader(data), nil
+}
+
+func unmarshalResponse(respBody []byte, err error) (json.RawMessage, error) {
+	if err != nil {
+		return nil, err
+	}
+
+	raw := make(json.RawMessage, 0, len(respBody))
+
+	err = json.Unmarshal(respBody, &raw)
+	if err != nil {
+		return nil, &JsonUnmarshalError{
+			jsonError: jsonError{
+				Err:      err,
+				DataKind: "response body",
+				Data:     respBody, // TODO: same problem as 404 handling
+			},
+		}
+	}
+
+	return raw, nil
 }
 
 // cloneMap returns a shallow clone of the given map.
@@ -44,4 +74,16 @@ func cloneMap[K comparable, V any](m map[K]V) map[K]V {
 	}
 
 	return m2
+}
+
+// readBodyStart reads the first errorRespMaxLength of the response body.
+func readBodyStart(body io.Reader) []byte {
+	content, err := io.ReadAll(io.LimitReader(body, errorRespMaxLength))
+	if err == io.EOF {
+		err = nil
+	} else if err != nil {
+		log.Println("Error reading body:", err)
+	}
+
+	return content
 }

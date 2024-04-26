@@ -103,7 +103,13 @@ func (iter *iterator) fetchPage(ctx context.Context) (ok bool) {
 
 	err = json.Unmarshal(resp, &page)
 	if err != nil {
-		iter.err = fmt.Errorf("failed to parse response: %w", err)
+		iter.err = &JsonUnmarshalError{
+			jsonError: jsonError{
+				Err:      err,
+				DataKind: "result page",
+				Data:     resp,
+			},
+		}
 
 		return false
 	}

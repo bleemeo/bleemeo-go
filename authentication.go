@@ -18,6 +18,7 @@ package bleemeo
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 
@@ -49,6 +50,22 @@ func newAuthProvider(endpointURL, username, password, clientID string) authentic
 func (ap authenticationProvider) injectHeader(req *http.Request) error {
 	tk, err := ap.tokenSource.Token()
 	if err != nil {
+		if retErr := new(oauth2.RetrieveError); errors.As(err, &retErr) {
+			return &AuthError{
+				ClientError: ClientError{
+					apiError: apiError{
+						ReqPath:     req.URL.Path,
+						StatusCode:  retErr.Response.StatusCode,
+						ContentType: retErr.Response.Header.Get("Content-Type"),
+						Message:     retErr.ErrorDescription,
+						Err:         err,
+						Response:    retErr.Body,
+					},
+				},
+				ErrorCode: retErr.ErrorCode,
+			}
+		}
+
 		return err
 	}
 

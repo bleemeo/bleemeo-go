@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 
@@ -19,6 +20,8 @@ func main() {
 		log.Fatalln("Failed to initialize client:", err)
 	}
 
+	// Retrieving only the id and label of each metric:
+	// the fewer fields required, the faster the query.
 	iter := client.Iterator(bleemeo.Metric, bleemeo.Params{"fields": "id,label"})
 	count := 0
 
@@ -45,8 +48,11 @@ func main() {
 		}
 	}
 
-	if err := iter.Err(); err != nil {
-		if apiErr := new(bleemeo.APIError); errors.As(err, &apiErr) {
+	if err = iter.Err(); err != nil {
+		if authErr := new(bleemeo.AuthError); errors.As(err, &authErr) {
+			log.Fatalln("Authentication error:", authErr.ErrorCode, "/", authErr.Message)
+		}
+
 		log.Fatalln("Iteration error:", err)
 	}
 

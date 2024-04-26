@@ -17,6 +17,7 @@
 package bleemeo
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -65,7 +66,7 @@ func (c *Client) Get(ctx context.Context, resource, id string, fields Fields) (j
 	reqURI := fmt.Sprintf("%s/%s/", resource, id)
 	params := Params{"fields": strings.Join(fields, ",")}
 
-	return c.Do(ctx, http.MethodGet, reqURI, params, true, nil)
+	return unmarshalResponse(c.Do(ctx, http.MethodGet, reqURI, params, true, nil))
 }
 
 // List the resources that match given params at the given page, with the given page size.
@@ -83,7 +84,13 @@ func (c *Client) GetPage(ctx context.Context, resource string, page, pageSize in
 
 	err = json.Unmarshal(resp, &resultPage)
 	if err != nil {
-		return ResultsPage{}, err
+		return ResultsPage{}, &JsonUnmarshalError{
+			jsonError: jsonError{
+				Err:      err,
+				DataKind: "result page",
+				Data:     resp,
+			},
+		}
 	}
 
 	return resultPage, nil
@@ -96,22 +103,22 @@ func (c *Client) Iterator(resource string, params Params) Iterator {
 
 // Create a resource with the given body.
 func (c *Client) Create(ctx context.Context, resource string, body Body) (json.RawMessage, error) {
-	bodyReader, err := readerFrom(body)
+	bodyReader, err := jsonReaderFrom(body)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.Do(ctx, http.MethodPost, resource+"/", nil, true, bodyReader)
+	return unmarshalResponse(c.Do(ctx, http.MethodPost, resource+"/", nil, true, bodyReader))
 }
 
 // Update the resource with the given id, with the given body.
 func (c *Client) Update(ctx context.Context, resource, id string, body Body) (json.RawMessage, error) {
-	bodyReader, err := readerFrom(body)
+	bodyReader, err := jsonReaderFrom(body)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.Do(ctx, http.MethodPatch, fmt.Sprintf("%s/%s/", resource, id), nil, true, bodyReader)
+	return unmarshalResponse(c.Do(ctx, http.MethodPatch, fmt.Sprintf("%s/%s/", resource, id), nil, true, bodyReader))
 }
 
 // Delete the resource with the given id.
@@ -122,7 +129,9 @@ func (c *Client) Delete(ctx context.Context, resource, id string) error {
 	return err
 }
 
-func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, authenticated bool, body io.Reader) (json.RawMessage, error) {
+// Do builds and execute the request according to the given parameters.
+// It returns the response body content, or any error that occurred.
+func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, authenticated bool, body io.Reader) ([]byte, error) {
 	reqURL, err := c.epURL.Parse(reqURI)
 	if err != nil {
 		return nil, err
@@ -161,14 +170,100 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 		return nil, err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		// Ensure we read the whole response to avoid "Connection reset by peer" on server
+		// and ensure HTTP connection can be reused
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+	}()
 
-	raw := make(json.RawMessage, 0, resp.ContentLength)
-
-	err = json.NewDecoder(resp.Body).Decode(&raw)
-	if err != nil {
-		return nil, err
+	if resp.StatusCode >= 500 {
+		return nil, &ServerError{
+			apiError: apiError{
+				ReqPath:     req.URL.Path,
+				StatusCode:  resp.StatusCode,
+				ContentType: resp.Header.Get("Content-Type"),
+				Message:     resp.Status,
+				Response:    readBodyStart(resp.Body),
+			},
+		}
 	}
 
-	return raw, nil
+	if resp.StatusCode == 404 {
+		// 404 is JSON with a "detail" key
+		var details struct {
+			Detail string `json:"detail"`
+		}
+
+		err = json.NewDecoder(resp.Body).Decode(&details)
+		if err != nil {
+			// TODO: this read misses all the data already read by the JSON decoder
+			content := readBodyStart(resp.Body)
+
+			return nil, &ClientError{
+				apiError: apiError{
+					ReqPath:     req.URL.Path,
+					StatusCode:  404,
+					ContentType: resp.Header.Get("Content-Type"),
+					Message:     resp.Status,
+					Err: &JsonUnmarshalError{
+						jsonError: jsonError{
+							DataKind: "404 details",
+							Err:      err,
+							Data:     content,
+						},
+					},
+					Response: content,
+				},
+			}
+		}
+
+		message := resp.Status
+		if details.Detail != "" {
+			message = details.Detail
+		}
+
+		return nil, &ClientError{
+			apiError: apiError{
+				ReqPath:     req.URL.Path,
+				StatusCode:  404,
+				ContentType: resp.Header.Get("Content-Type"),
+				Message:     message,
+				Err:         fmt.Errorf("%w: %s", ErrResourceNotFound, req.URL.Path),
+				Response:    readBodyStart(resp.Body),
+			},
+		}
+
+	}
+
+	if resp.StatusCode >= 400 {
+		return nil, &ClientError{
+			apiError: apiError{
+				ReqPath:     req.URL.Path,
+				StatusCode:  resp.StatusCode,
+				ContentType: resp.Header.Get("Content-Type"),
+				Message:     resp.Status,
+				Response:    readBodyStart(resp.Body),
+			},
+		}
+	}
+
+	respBuf := new(bytes.Buffer)
+	respBuf.Grow(int(resp.ContentLength))
+
+	_, err = respBuf.ReadFrom(resp.Body)
+	if err != nil {
+		return nil, &ServerError{
+			apiError: apiError{
+				ReqPath:     req.URL.Path,
+				StatusCode:  resp.StatusCode,
+				ContentType: resp.Header.Get("Content-Type"),
+				Message:     "can't read response body",
+				Err:         err,
+				Response:    nil,
+			},
+		}
+	}
+
+	return respBuf.Bytes(), nil
 }
