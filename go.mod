@@ -1,4 +1,4 @@
-module github.com/bleemeo/bleemeo
+module github.com/bleemeo/bleemeo-go
 
 go 1.18
 
