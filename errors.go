@@ -59,21 +59,27 @@ func (apiErr *apiError) Unwrap() error {
 	return apiErr.Err
 }
 
+// A ClientError holds an error due to improper use of the API,
+// resulting in a status code in the 400 range.
 type ClientError struct {
 	apiError
 }
 
+// A ServerError holds an error that occurred on the server-side,
+// resulting in a status code in the 500 range.
 type ServerError struct {
 	apiError
 }
 
+// An AuthError holds an error due to unspecified or invalid credentials.
 type AuthError struct {
 	ClientError
+	// ErrorCode is RFC 6749's 'error' parameter.
 	ErrorCode string
 }
 
 func (authErr *AuthError) Error() string {
-	return fmt.Sprintf("authentication error: %s - %s)", authErr.ErrorCode, authErr.Err.Error())
+	return fmt.Sprintf("authentication error: %s", authErr.Err.Error())
 }
 
 type jsonError struct {

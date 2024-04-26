@@ -39,6 +39,8 @@ type Client struct {
 	authProvider authenticationProvider
 }
 
+// NewClient initializes a Bleemeo API client with the given options.
+// If an error is returned, it will be of type [url.Error].
 func NewClient(opts ...ClientOption) (*Client, error) {
 	c := &Client{
 		endpoint:      "https://api.bleemeo.com",

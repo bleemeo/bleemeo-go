@@ -21,8 +21,10 @@ import (
 	"os"
 )
 
+// A ClientOption can be used to customize the [Client].
 type ClientOption func(*Client)
 
+// WithCredentials will make the client use the given credentials.
 func WithCredentials(username, password string) ClientOption {
 	return func(c *Client) {
 		c.username = username
@@ -30,6 +32,8 @@ func WithCredentials(username, password string) ClientOption {
 	}
 }
 
+// WithCredentialsFromEnv will make the client retrieve and use credentials
+// from the "BLEEMEO_USER" and "BLEEMEO_PASSWORD" environment variables.
 func WithCredentialsFromEnv() ClientOption {
 	return func(c *Client) {
 		c.username = os.Getenv("BLEEMEO_USER")
@@ -38,24 +42,29 @@ func WithCredentialsFromEnv() ClientOption {
 	}
 }
 
+// WithEndpoint will make the client use the given endpoint over the default one.
 func WithEndpoint(endpoint string) ClientOption {
 	return func(c *Client) {
 		c.endpoint = endpoint
 	}
 }
 
+// WithOAuthClientID will make the client use the given OAuth client ID.
 func WithOAuthClientID(clientID string) ClientOption {
 	return func(c *Client) {
 		c.oAuthClientID = clientID
 	}
 }
 
+// WithHTTPClient will make the client execute requests with the given [http.Client].
 func WithHTTPClient(client *http.Client) ClientOption {
 	return func(c *Client) {
 		c.client = client
 	}
 }
 
+// WithBleemeoAccountHeader will make the client include the given account ID
+// in the X-Bleemeo-Account request header.
 func WithBleemeoAccountHeader(accountID string) ClientOption {
 	return func(c *Client) {
 		c.customHeaders["X-Bleemeo-Account"] = accountID

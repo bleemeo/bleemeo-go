@@ -25,10 +25,22 @@ import (
 var DefaultFields Fields = nil
 
 type (
+	// Fields represents the list of fields to retrieve for a given model.
 	Fields = []string
+	// Params represents a set of URL query parameters.
+	//
+	// For example, a parameter may be a comma-separated field list:
+	// [Params]{"fields": "id,label,labels_text"}
+	// Note: if no fields are specified, DefaultFields will be used.
+	//
+	// Or a value to filter a metric listing query:
+	// [Params]{"search": "kubernetes"}
 	Params = map[string]string
-	Body   = map[string]any
+	// A Body represents the data to create or update.
+	// It will be marshaled to JSON before being sent to the API.
+	Body = map[string]any
 
+	// A ResultsPage represents a section of a resource listing.
 	ResultsPage struct {
 		Count    int               `json:"count"`
 		Next     string            `json:"next"`
