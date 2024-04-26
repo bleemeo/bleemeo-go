@@ -20,6 +20,10 @@ import (
 	"encoding/json"
 )
 
+// DefaultFields will make the API to return the model's basic fields.
+// Default fields vary from one model to another.
+var DefaultFields Fields = nil
+
 type (
 	Fields = []string
 	Params = map[string]string

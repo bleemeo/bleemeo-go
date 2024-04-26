@@ -1,10 +1,10 @@
 # Bleemeo Go
 
-Go library for the Bleemeo API
+### Go library for interacting with the Bleemeo API
 
-### Basic usage
+## Basic usage
 
-Retrieving a metric by ID, only interested in the `id` and `label` fields.
+Retrieving a metric by ID, expecting the model's default fields.
 
 ```go
 package main
@@ -24,7 +24,7 @@ func main() {
 		log.Fatalln("Failed to initialize client:", err)
 	}
 
-	metric, err := client.Get(context.Background(), bleemeo.Metric, "<the metric UUID>", bleemeo.Fields{"id", "label"})
+	metric, err := client.Get(context.Background(), bleemeo.Metric, "<the metric UUID>", bleemeo.DefaultFields)
 	if err != nil {
 		log.Fatalln("Failed to retrieve metric:", err)
 	}
