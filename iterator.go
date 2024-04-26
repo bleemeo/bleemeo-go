@@ -35,7 +35,7 @@ type Iterator interface {
 	Err() error
 }
 
-func newIterator(c *Client, resource string, params Params) Iterator {
+func newIterator(c *Client, resource Resource, params Params) Iterator {
 	return &iterator{
 		c:        c,
 		resource: resource,
@@ -45,7 +45,7 @@ func newIterator(c *Client, resource string, params Params) Iterator {
 
 type iterator struct {
 	c        *Client
-	resource string
+	resource Resource
 	params   Params
 
 	currentPage  *ResultsPage

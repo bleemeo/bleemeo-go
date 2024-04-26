@@ -64,7 +64,7 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 }
 
 // Get the resource with the given id, with only the given fields, if not nil.
-func (c *Client) Get(ctx context.Context, resource, id string, fields Fields) (json.RawMessage, error) {
+func (c *Client) Get(ctx context.Context, resource Resource, id string, fields Fields) (json.RawMessage, error) {
 	reqURI := fmt.Sprintf("%s/%s/", resource, id)
 	params := Params{"fields": strings.Join(fields, ",")}
 
@@ -72,12 +72,12 @@ func (c *Client) Get(ctx context.Context, resource, id string, fields Fields) (j
 }
 
 // List the resources that match given params at the given page, with the given page size.
-func (c *Client) GetPage(ctx context.Context, resource string, page, pageSize int, params Params) (ResultsPage, error) {
+func (c *Client) GetPage(ctx context.Context, resource Resource, page, pageSize int, params Params) (ResultsPage, error) {
 	params = cloneMap(params) // avoid mutation of given params
 	params["page"] = strconv.Itoa(page)
 	params["page_size"] = strconv.Itoa(pageSize)
 
-	resp, err := c.Do(ctx, http.MethodGet, resource+"/", params, true, nil)
+	resp, err := c.Do(ctx, http.MethodGet, string(resource+"/"), params, true, nil)
 	if err != nil {
 		return ResultsPage{}, err
 	}
@@ -99,22 +99,22 @@ func (c *Client) GetPage(ctx context.Context, resource string, page, pageSize in
 }
 
 // Iterate over resources that match given params.
-func (c *Client) Iterator(resource string, params Params) Iterator {
+func (c *Client) Iterator(resource Resource, params Params) Iterator {
 	return newIterator(c, resource, params)
 }
 
 // Create a resource with the given body.
-func (c *Client) Create(ctx context.Context, resource string, body Body) (json.RawMessage, error) {
+func (c *Client) Create(ctx context.Context, resource Resource, body Body) (json.RawMessage, error) {
 	bodyReader, err := jsonReaderFrom(body)
 	if err != nil {
 		return nil, err
 	}
 
-	return unmarshalResponse(c.Do(ctx, http.MethodPost, resource+"/", nil, true, bodyReader))
+	return unmarshalResponse(c.Do(ctx, http.MethodPost, string(resource+"/"), nil, true, bodyReader))
 }
 
 // Update the resource with the given id, with the given body.
-func (c *Client) Update(ctx context.Context, resource, id string, body Body) (json.RawMessage, error) {
+func (c *Client) Update(ctx context.Context, resource Resource, id string, body Body) (json.RawMessage, error) {
 	bodyReader, err := jsonReaderFrom(body)
 	if err != nil {
 		return nil, err
@@ -124,7 +124,7 @@ func (c *Client) Update(ctx context.Context, resource, id string, body Body) (js
 }
 
 // Delete the resource with the given id.
-func (c *Client) Delete(ctx context.Context, resource, id string) error {
+func (c *Client) Delete(ctx context.Context, resource Resource, id string) error {
 	reqURI := fmt.Sprintf("%s/%s/", resource, id)
 	_, err := c.Do(ctx, http.MethodDelete, reqURI, nil, true, nil)
 

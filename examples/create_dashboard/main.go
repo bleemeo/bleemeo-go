@@ -19,7 +19,7 @@ func main() {
 		log.Fatalln("Failed to initialize client:", err)
 	}
 
-	dashboard, err := client.Create(context.Background(), bleemeo.Dashboard, bleemeo.Body{"name": "My dashboard"})
+	dashboard, err := client.Create(context.Background(), bleemeo.ResourceDashboard, bleemeo.Body{"name": "My dashboard"})
 	if err != nil {
 		log.Fatalln("Error creating dashboard:", err)
 	}
@@ -36,15 +36,15 @@ func main() {
 
 	fmt.Println("Successfully created dashboard:", dashboardObj)
 
-	widget, err := client.Create(context.Background(), bleemeo.Widget, bleemeo.Body{"dashboard": dashboardObj.ID, "title": "My widget", "graph": bleemeo.Graph_Text})
+	widget, err := client.Create(context.Background(), bleemeo.ResourceWidget, bleemeo.Body{"dashboard": dashboardObj.ID, "title": "My widget", "graph": bleemeo.Graph_Text})
 	if err != nil {
 		log.Fatalln("Error creating widget:", err)
 	}
 
 	var widgetObj struct {
-		ID    string            `json:"id"`
-		Title string            `json:"title"`
-		Graph bleemeo.GraphType `json:"graph"`
+		ID    string        `json:"id"`
+		Title string        `json:"title"`
+		Graph bleemeo.Graph `json:"graph"`
 	}
 
 	err = json.Unmarshal(widget, &widgetObj)

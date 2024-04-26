@@ -21,7 +21,7 @@ func main() {
 
 	pageNumber, pageSize := 1, 1
 
-	resultPage, err := client.GetPage(context.Background(), bleemeo.Widget, pageNumber, pageSize, bleemeo.Params{"title": "My widget", "fields": "id"})
+	resultPage, err := client.GetPage(context.Background(), bleemeo.ResourceWidget, pageNumber, pageSize, bleemeo.Params{"title": "My widget", "fields": "id"})
 	if err != nil {
 		log.Fatalln("Failed to fetch widget:", err)
 	}
@@ -31,9 +31,9 @@ func main() {
 	}
 
 	var widgetObj struct {
-		ID    string            `json:"id"`
-		Title string            `json:"title"`
-		Graph bleemeo.GraphType `json:"graph"`
+		ID    string        `json:"id"`
+		Title string        `json:"title"`
+		Graph bleemeo.Graph `json:"graph"`
 	}
 
 	err = json.Unmarshal(resultPage.Results[0], &widgetObj)
@@ -41,7 +41,7 @@ func main() {
 		log.Fatalln("Error unmarshalling widget:", err)
 	}
 
-	widget, err := client.Update(context.Background(), bleemeo.Widget, widgetObj.ID, bleemeo.Body{"title": "This is my widget"})
+	widget, err := client.Update(context.Background(), bleemeo.ResourceWidget, widgetObj.ID, bleemeo.Body{"title": "This is my widget"})
 	if err != nil {
 		log.Fatalln("Failed to update widget:", err)
 	}

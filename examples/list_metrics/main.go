@@ -22,7 +22,7 @@ func main() {
 
 	// Retrieving only the id and label of each metric:
 	// the fewer fields required, the faster the query.
-	iter := client.Iterator(bleemeo.Metric, bleemeo.Params{"fields": "id,label"})
+	iter := client.Iterator(bleemeo.ResourceMetric, bleemeo.Params{"fields": "id,label"})
 	count := 0
 
 	type metricType struct {
