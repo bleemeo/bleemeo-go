@@ -9,6 +9,7 @@ import (
 	"github.com/bleemeo/bleemeo-go"
 )
 
+// Creating a dashboard and a widget
 func main() {
 	client, err := bleemeo.NewClient(
 		bleemeo.WithConfigurationFromEnv(),
@@ -40,6 +41,7 @@ func main() {
 	}
 
 	fmt.Println("Successfully created dashboard:", dashboardObj)
+	fmt.Println("View it on https://panel.bleemeo.com/dashboard/" + dashboardObj.ID)
 
 	widget, err := client.Create(context.Background(), bleemeo.ResourceWidget, bleemeo.Body{"dashboard": dashboardObj.ID, "title": "My widget", "graph": bleemeo.Graph_Text})
 	if err != nil {

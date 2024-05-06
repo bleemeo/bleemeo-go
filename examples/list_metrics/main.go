@@ -10,6 +10,7 @@ import (
 	"github.com/bleemeo/bleemeo-go"
 )
 
+// Listing the first 200 metrics of the account
 func main() {
 	client, err := bleemeo.NewClient(
 		bleemeo.WithConfigurationFromEnv(),
@@ -27,7 +28,7 @@ func main() {
 
 	// Retrieving only the id and label of each metric:
 	// the fewer fields required, the faster the query.
-	iter := client.Iterator(bleemeo.ResourceMetric, bleemeo.Params{"fields": "id,label"})
+	iter := client.Iterator(bleemeo.ResourceMetric, bleemeo.Params{"fields": "id,label", "active": "True"})
 	count := 0
 
 	type metricType struct {
@@ -43,11 +44,11 @@ func main() {
 			log.Fatalln("Failed to unmarshal metric:", err)
 		}
 
-		fmt.Println("->", metricObj)
-
 		count++
-		if count == 200 {
-			fmt.Println("Listing has at least 200 metrics, only the first 200 metrics are shown")
+		if count <= 200 {
+			fmt.Println("-> ", metricObj)
+		} else if count == 201 {
+			fmt.Println("Listing has more than 200 metrics, only the first 200 metrics are shown")
 
 			break
 		}
@@ -61,5 +62,5 @@ func main() {
 		log.Fatalln("Iteration error:", err)
 	}
 
-	fmt.Printf("Successfully listed %d metrics\n", count)
+	fmt.Printf("Successfully retrieved %d metrics from API\n", count)
 }

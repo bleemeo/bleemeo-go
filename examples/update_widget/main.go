@@ -9,6 +9,7 @@ import (
 	"github.com/bleemeo/bleemeo-go"
 )
 
+// Updating the content of a widget
 func main() {
 	client, err := bleemeo.NewClient(
 		bleemeo.WithConfigurationFromEnv(),
@@ -26,7 +27,7 @@ func main() {
 
 	pageNumber, pageSize := 1, 1
 
-	resultPage, err := client.GetPage(context.Background(), bleemeo.ResourceWidget, pageNumber, pageSize, bleemeo.Params{"title": "My widget", "fields": "id"})
+	resultPage, err := client.GetPage(context.Background(), bleemeo.ResourceWidget, pageNumber, pageSize, bleemeo.Params{"title": "My widget", "fields": "id,dashboard"})
 	if err != nil {
 		log.Fatalln("Failed to fetch widget:", err)
 	}
@@ -36,9 +37,10 @@ func main() {
 	}
 
 	var widgetObj struct {
-		ID    string        `json:"id"`
-		Title string        `json:"title"`
-		Graph bleemeo.Graph `json:"graph"`
+		ID          string        `json:"id"`
+		Title       string        `json:"title"`
+		Graph       bleemeo.Graph `json:"graph"`
+		DashboardID string        `json:"dashboard"`
 	}
 
 	err = json.Unmarshal(resultPage.Results[0], &widgetObj)
@@ -57,4 +59,5 @@ func main() {
 	}
 
 	fmt.Println("Successfully updated widget:", widgetObj)
+	fmt.Println("Check it on https://panel.bleemeo.com/dashboard/" + widgetObj.DashboardID)
 }

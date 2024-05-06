@@ -41,12 +41,13 @@ type Client struct {
 }
 
 // NewClient initializes a Bleemeo API client with the given options.
-// If an error is returned, it will be of type [url.Error].
+// The credentials should be provided by some option.
+// The option WithConfigurationFromEnv() might be useful for a default configuration.
 func NewClient(opts ...ClientOption) (*Client, error) {
 	c := &Client{
 		endpoint:      "https://api.bleemeo.com",
 		client:        new(http.Client),
-		customHeaders: make(map[string]string),
+		customHeaders: map[string]string{"User-Agent": "Bleemeo Go Client"},
 	}
 
 	for _, opt := range opts {
@@ -99,7 +100,8 @@ func (c *Client) Get(ctx context.Context, resource Resource, id string, fields F
 	return unmarshalResponse(c.Do(ctx, http.MethodGet, reqURI, params, true, nil))
 }
 
-// List the resources that match given params at the given page, with the given page size.
+// GetPage returns a list of resources that match given params at the given page, with the given page size.
+// To collect all resources matching params (i.e., instead of querying all pages), prefer using Iterator() which is faster.
 func (c *Client) GetPage(ctx context.Context, resource Resource, page, pageSize int, params Params) (ResultsPage, error) {
 	params = cloneMap(params) // avoid mutation of given params
 	params["page"] = strconv.Itoa(page)
@@ -126,7 +128,7 @@ func (c *Client) GetPage(ctx context.Context, resource Resource, page, pageSize 
 	return resultPage, nil
 }
 
-// Iterate over resources that match given params.
+// Iterator returns all resources that match given params.
 func (c *Client) Iterator(resource Resource, params Params) Iterator {
 	return newIterator(c, resource, params)
 }
