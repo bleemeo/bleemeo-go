@@ -32,6 +32,7 @@ type Client struct {
 	username, password string
 	endpoint           string
 	oAuthClientID      string
+	oAuthClientSecret  string
 	client             *http.Client
 	customHeaders      map[string]string
 
@@ -58,7 +59,7 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	}
 
 	c.epURL = epURL
-	c.authProvider = newAuthProvider(c.endpoint, c.username, c.password, c.oAuthClientID)
+	c.authProvider = newAuthProvider(c.endpoint, c.username, c.password, c.oAuthClientID, c.oAuthClientSecret)
 
 	return c, nil
 }

@@ -39,10 +39,11 @@ func WithEndpoint(endpoint string) ClientOption {
 	}
 }
 
-// WithOAuthClientID will make the client use the given OAuth client ID.
-func WithOAuthClientID(clientID string) ClientOption {
+// WithOAuthClientID will make the client use the given OAuth client ID/secret.
+func WithOAuthClientID(clientID, clientSecret string) ClientOption {
 	return func(c *Client) {
 		c.oAuthClientID = clientID
+		c.oAuthClientSecret = clientSecret
 	}
 }
 
@@ -61,7 +62,7 @@ func WithBleemeoAccountHeader(accountID string) ClientOption {
 //
 // - API URL: "BLEEMEO_API_URL"
 //
-// - OAuth client ID: "BLEEMEO_OAUTH_CLIENT_ID"
+// - OAuth client ID/secret: "BLEEMEO_OAUTH_CLIENT_ID" & "BLEEMEO_OAUTH_CLIENT_SECRET"
 //
 // - Bleemeo account ID: "BLEEMEO_ACCOUNT_ID"
 func WithConfigurationFromEnv() ClientOption {
@@ -80,6 +81,10 @@ func WithConfigurationFromEnv() ClientOption {
 
 		if oAuthClientID, set := os.LookupEnv("BLEEMEO_OAUTH_CLIENT_ID"); set {
 			c.oAuthClientID = oAuthClientID
+		}
+
+		if oAuthClientSecret, set := os.LookupEnv("BLEEMEO_OAUTH_CLIENT_SECRET"); set {
+			c.oAuthClientSecret = oAuthClientSecret
 		}
 
 		if accountID, set := os.LookupEnv("BLEEMEO_ACCOUNT_ID"); set {

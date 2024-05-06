@@ -30,10 +30,11 @@ type authenticationProvider struct {
 	tokenSource oauth2.TokenSource
 }
 
-func newAuthProvider(endpointURL, username, password, clientID string) authenticationProvider {
+func newAuthProvider(endpointURL, username, password, clientID, clientSecret string) authenticationProvider {
 	cfg := clientcredentials.Config{
-		ClientID: clientID,
-		TokenURL: endpointURL + "/o/token/",
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		TokenURL:     endpointURL + "/o/token/",
 		EndpointParams: url.Values{
 			"grant_type": {"password"},
 			"username":   {username},
