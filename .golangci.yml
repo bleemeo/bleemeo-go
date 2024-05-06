@@ -1,0 +1,73 @@
+run:
+  go: "1.18"
+  timeout: 5m
+
+linters:
+  enable-all: true
+  disable:
+    # Base linters disabled for all projects.
+    - funlen
+    - gomnd  # Too picky. For example it says that 1000 (used in number of ms in one second) is a magic number.
+    - exhaustivestruct # This linter is meant to be used only for special cases. It is not recommended to use it for all files in a project.
+    - exhaustruct # Same as above.
+    - gci # Conflicts with gofumpt.
+    - varnamelen # I think there is too many false-positive.
+    - ireturn # Complain that interface A implementation method return an interface B... it is a requirement of interface A that is unavoidable.
+    - nonamedreturns # Warn for every named return, not useful.
+    - interfacebloat # Warn when an interface has too many methods, not useful.
+    # Deprecated and replaced linter.
+    - maligned
+    - golint
+    - interfacer
+    - scopelint
+    - ifshort
+    - deadcode
+    - structcheck
+    - varcheck
+    - nosnakecase
+    - execinquery
+    # We use maintidx to lint function complexity.
+    - gocyclo
+    - cyclop
+    - gocognit
+
+    # Project specific disable.
+    - gomoddirectives # We sometimes need to use mod replacements to fix upgrades.
+
+linters-settings:
+  nolintlint:
+    # Require nolint directives to mention the specific linter being suppressed.
+    require-specific: true
+
+  tagliatelle:
+    # Check struct tag name case.
+    case:
+      # Use the struct field name to check the name of the struct tag.
+      rules:
+        json: snake
+        yaml: snake
+
+  depguard:
+    rules:
+      main:
+        deny:
+          - pkg: "io/ioutil"
+            desc: "ioutil is deprecated starting with Go 1.16"
+
+issues:
+  exclude-rules:
+    # False positive: https://github.com/kunwardeep/paralleltest/issues/8.
+    - linters:
+        - paralleltest
+      text: "does not use range value in test Run"
+
+  include: # the ids of default excluded to include
+    - EXC0005 # ineffective break statement
+    - EXC0009 # create files/directories with minimum permissions
+    - EXC0011 # should have a package comment|comment should be of the form
+    - EXC0012 # exported var/functions should have a comment
+    - EXC0013 # package comment should be of the form
+    - EXC0014 # comment on exported var should be of the form
+
+  max-issues-per-linter: 0
+  max-same-issues: 0
