@@ -30,7 +30,9 @@ type authenticationProvider struct {
 	tokenSource oauth2.TokenSource
 }
 
-func newAuthProvider(endpointURL, username, password, clientID, clientSecret string, client *http.Client) authenticationProvider {
+// newCredentialsAuthProvider makes a new token source based on the given credentials.
+// New tokens will be fetched with the "password" grant type.
+func newCredentialsAuthProvider(endpointURL, username, password, clientID, clientSecret string, client *http.Client) authenticationProvider {
 	cfg := clientcredentials.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
@@ -46,6 +48,29 @@ func newAuthProvider(endpointURL, username, password, clientID, clientSecret str
 	return authenticationProvider{
 		tokenSource: cfg.TokenSource(context.WithValue(context.Background(), oauth2.HTTPClient, client)),
 	}
+}
+
+// newRefreshAuthProvider makes a new token source based on the given refresh token.
+// New tokens will be fetched with the "refresh_token" grant type.
+func newRefreshAuthProvider(endpointURL, clientID, refreshToken string, client *http.Client) authenticationProvider {
+	cfg := oauth2.Config{
+		ClientID: clientID,
+		Endpoint: oauth2.Endpoint{
+			TokenURL:  endpointURL + "/o/token/",
+			AuthStyle: oauth2.AuthStyleInParams,
+		},
+	}
+	initialToken := oauth2.Token{
+		RefreshToken: refreshToken,
+	}
+
+	return authenticationProvider{
+		tokenSource: cfg.TokenSource(context.WithValue(context.Background(), oauth2.HTTPClient, client), &initialToken),
+	}
+}
+
+func (ap authenticationProvider) token() (*oauth2.Token, error) {
+	return ap.tokenSource.Token()
 }
 
 func (ap authenticationProvider) injectHeader(req *http.Request) error {

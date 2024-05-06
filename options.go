@@ -93,6 +93,14 @@ func WithConfigurationFromEnv() ClientOption {
 	}
 }
 
+// WithInitialOAuthRefreshToken will make the client use the given refresh token
+// for authenticating against the API, instead of regular user/password credentials.
+func WithInitialOAuthRefreshToken(refreshToken string) ClientOption {
+	return func(c *Client) {
+		c.oAuthInitialRefresh = refreshToken
+	}
+}
+
 // WithHTTPClient will make the client execute requests with the given [http.Client].
 func WithHTTPClient(client *http.Client) ClientOption {
 	return func(c *Client) {

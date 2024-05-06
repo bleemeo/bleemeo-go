@@ -29,12 +29,13 @@ import (
 )
 
 type Client struct {
-	username, password string
-	endpoint           string
-	oAuthClientID      string
-	oAuthClientSecret  string
-	client             *http.Client
-	customHeaders      map[string]string
+	username, password  string
+	endpoint            string
+	oAuthClientID       string
+	oAuthClientSecret   string
+	oAuthInitialRefresh string
+	client              *http.Client
+	customHeaders       map[string]string
 
 	epURL        *url.URL
 	authProvider authenticationProvider
@@ -60,19 +61,30 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	}
 
 	c.epURL = epURL
-	c.authProvider = newAuthProvider(c.endpoint, c.username, c.password, c.oAuthClientID, c.oAuthClientSecret, c.client)
+
+	if c.oAuthInitialRefresh == "" {
+		tk, err := newCredentialsAuthProvider(c.endpoint, c.username, c.password, c.oAuthClientID, c.oAuthClientSecret, c.client).token()
+		if err != nil {
+			return nil, err
+		}
+
+		c.oAuthInitialRefresh = tk.RefreshToken
+	}
+
+	c.authProvider = newRefreshAuthProvider(c.endpoint, c.oAuthClientID, c.oAuthInitialRefresh, c.client)
 
 	return c, nil
 }
 
 // Logout revokes the OAuth token and prevents it from being reused.
 func (c *Client) Logout(ctx context.Context) error {
-	currentToken, err := c.authProvider.tokenSource.Token()
+	currentToken, err := c.authProvider.token()
 	if err != nil {
 		return fmt.Errorf("couldn't retrieve token: %w", err)
 	}
 
-	body := strings.NewReader(fmt.Sprintf("token=%s&client_id=%s", currentToken.AccessToken, c.oAuthClientID))
+	// Revoking the refresh token will also revoke the related access token
+	body := strings.NewReader(fmt.Sprintf("client_id=%s&token_type_hint=refresh_token&token=%s", c.oAuthClientID, currentToken.RefreshToken))
 	// Temporarily modifying the content type to override application/json
 	previousContentType, hadContentType := c.customHeaders["Content-Type"]
 	c.customHeaders["Content-Type"] = "application/x-www-form-urlencoded"
