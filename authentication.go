@@ -30,7 +30,7 @@ type authenticationProvider struct {
 	tokenSource oauth2.TokenSource
 }
 
-func newAuthProvider(endpointURL, username, password, clientID, clientSecret string) authenticationProvider {
+func newAuthProvider(endpointURL, username, password, clientID, clientSecret string, client *http.Client) authenticationProvider {
 	cfg := clientcredentials.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
@@ -44,7 +44,7 @@ func newAuthProvider(endpointURL, username, password, clientID, clientSecret str
 	}
 
 	return authenticationProvider{
-		tokenSource: cfg.TokenSource(context.Background()),
+		tokenSource: cfg.TokenSource(context.WithValue(context.Background(), oauth2.HTTPClient, client)),
 	}
 }
 

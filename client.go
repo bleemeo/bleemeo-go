@@ -60,7 +60,7 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	}
 
 	c.epURL = epURL
-	c.authProvider = newAuthProvider(c.endpoint, c.username, c.password, c.oAuthClientID, c.oAuthClientSecret)
+	c.authProvider = newAuthProvider(c.endpoint, c.username, c.password, c.oAuthClientID, c.oAuthClientSecret, c.client)
 
 	return c, nil
 }
