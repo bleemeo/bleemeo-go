@@ -92,7 +92,7 @@ func (iter *iterator) fetchPage(ctx context.Context) (ok bool) {
 		reqURI = iter.currentPage.Next
 	}
 
-	resp, err := iter.c.Do(ctx, http.MethodGet, reqURI, iter.params, true, nil)
+	_, resp, err := iter.c.Do(ctx, http.MethodGet, reqURI, iter.params, true, nil)
 	if err != nil {
 		iter.err = err
 

@@ -44,7 +44,7 @@ func jsonReaderFrom(body Body) (io.Reader, error) {
 	return bytes.NewReader(data), nil
 }
 
-func unmarshalResponse(respBody []byte, err error) (json.RawMessage, error) {
+func unmarshalResponse(_ int, respBody []byte, err error) (json.RawMessage, error) {
 	if err != nil {
 		return nil, err
 	}

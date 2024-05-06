@@ -77,7 +77,7 @@ func (c *Client) Logout(ctx context.Context) error {
 	previousContentType, hadContentType := c.customHeaders["Content-Type"]
 	c.customHeaders["Content-Type"] = "application/x-www-form-urlencoded"
 
-	_, err = c.Do(ctx, http.MethodPost, "o/revoke_token/", nil, true, body)
+	statusCode, _, err := c.Do(ctx, http.MethodPost, "o/revoke_token/", nil, true, body)
 
 	if hadContentType {
 		c.customHeaders["Content-Type"] = previousContentType
@@ -87,6 +87,10 @@ func (c *Client) Logout(ctx context.Context) error {
 
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrTokenRevoke, err)
+	}
+
+	if statusCode != http.StatusOK {
+		return fmt.Errorf("%w: server replyed with status code %d", ErrTokenRevoke, statusCode)
 	}
 
 	return nil
@@ -107,7 +111,7 @@ func (c *Client) GetPage(ctx context.Context, resource Resource, page, pageSize 
 	params["page"] = strconv.Itoa(page)
 	params["page_size"] = strconv.Itoa(pageSize)
 
-	resp, err := c.Do(ctx, http.MethodGet, string(resource+"/"), params, true, nil)
+	_, resp, err := c.Do(ctx, http.MethodGet, string(resource+"/"), params, true, nil)
 	if err != nil {
 		return ResultsPage{}, err
 	}
@@ -156,22 +160,22 @@ func (c *Client) Update(ctx context.Context, resource Resource, id string, body 
 // Delete the resource with the given id.
 func (c *Client) Delete(ctx context.Context, resource Resource, id string) error {
 	reqURI := fmt.Sprintf("%s/%s/", resource, id)
-	_, err := c.Do(ctx, http.MethodDelete, reqURI, nil, true, nil)
+	_, _, err := c.Do(ctx, http.MethodDelete, reqURI, nil, true, nil)
 
 	return err
 }
 
 // Do builds and execute the request according to the given parameters.
-// It returns the response body content, or any error that occurred.
-func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, authenticated bool, body io.Reader) ([]byte, error) {
+// It returns the response status code and body content, or any error that occurred.
+func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, authenticated bool, body io.Reader) (int, []byte, error) {
 	reqURL, err := c.epURL.Parse(reqURI)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, reqURL.String(), body)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 
 	q := req.URL.Query()
@@ -189,7 +193,7 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 	if authenticated {
 		err = c.authProvider.injectHeader(req)
 		if err != nil {
-			return nil, err
+			return 0, nil, err
 		}
 	}
 
@@ -199,7 +203,7 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 
 	defer func() {
@@ -210,7 +214,7 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 	}()
 
 	if resp.StatusCode >= 500 {
-		return nil, &ServerError{
+		return resp.StatusCode, nil, &ServerError{
 			apiError: apiError{
 				ReqPath:     req.URL.Path,
 				StatusCode:  resp.StatusCode,
@@ -232,7 +236,7 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 			// TODO: this read misses all the data already read by the JSON decoder
 			content := readBodyStart(resp.Body)
 
-			return nil, &ClientError{
+			return resp.StatusCode, nil, &ClientError{
 				apiError: apiError{
 					ReqPath:     req.URL.Path,
 					StatusCode:  404,
@@ -255,7 +259,7 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 			message = details.Detail
 		}
 
-		return nil, &ClientError{
+		return resp.StatusCode, nil, &ClientError{
 			apiError: apiError{
 				ReqPath:     req.URL.Path,
 				StatusCode:  404,
@@ -269,7 +273,7 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 	}
 
 	if resp.StatusCode >= 400 {
-		return nil, &ClientError{
+		return resp.StatusCode, nil, &ClientError{
 			apiError: apiError{
 				ReqPath:     req.URL.Path,
 				StatusCode:  resp.StatusCode,
@@ -285,7 +289,7 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 
 	_, err = respBuf.ReadFrom(resp.Body)
 	if err != nil {
-		return nil, &ServerError{
+		return resp.StatusCode, nil, &ServerError{
 			apiError: apiError{
 				ReqPath:     req.URL.Path,
 				StatusCode:  resp.StatusCode,
@@ -297,5 +301,5 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 		}
 	}
 
-	return respBuf.Bytes(), nil
+	return resp.StatusCode, respBuf.Bytes(), nil
 }

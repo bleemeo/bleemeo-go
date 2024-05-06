@@ -48,9 +48,13 @@ func main() {
 
 	resource := fmt.Sprintf("%s/%s/data/", bleemeo.ResourceMetric, metricObj.ID)
 
-	resp, err := client.Do(context.Background(), http.MethodGet, resource, nil, true, nil)
+	statusCode, resp, err := client.Do(context.Background(), http.MethodGet, resource, nil, true, nil)
 	if err != nil {
 		log.Fatalln("Failed to fetch metric data:", err)
+	}
+
+	if statusCode != http.StatusOK {
+		log.Fatalln("Unexpected status code:", statusCode)
 	}
 
 	var metricData struct {
