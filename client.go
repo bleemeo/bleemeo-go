@@ -117,7 +117,7 @@ func (c *Client) GetPage(ctx context.Context, resource Resource, page, pageSize 
 		return ResultsPage{}, &JsonUnmarshalError{
 			jsonError: jsonError{
 				Err:      err,
-				DataKind: "result page",
+				DataKind: JsonErrorDataKind_ResultPage,
 				Data:     resp,
 			},
 		}
@@ -238,7 +238,7 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 					Message:     resp.Status,
 					Err: &JsonUnmarshalError{
 						jsonError: jsonError{
-							DataKind: "404 details",
+							DataKind: JsonErrorDataKind_404Details,
 							Err:      err,
 							Data:     content,
 						},

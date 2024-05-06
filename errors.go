@@ -28,6 +28,27 @@ var (
 	ErrTokenRevoke      = errors.New("failed to revoke token")
 )
 
+type JsonErrorDataKind int
+
+const (
+	JsonErrorDataKind_404Details JsonErrorDataKind = iota
+	JsonErrorDataKind_ResultPage
+	JsonErrorDataKind_RequestBody
+)
+
+func (kind JsonErrorDataKind) String() string {
+	switch kind {
+	case JsonErrorDataKind_404Details:
+		return "404 details"
+	case JsonErrorDataKind_ResultPage:
+		return "result page"
+	case JsonErrorDataKind_RequestBody:
+		return "request body"
+	default:
+		return fmt.Sprintf("unknown JsonErrorDataKind(%d)", kind)
+	}
+}
+
 type apiError struct {
 	ReqPath     string
 	StatusCode  int
@@ -85,12 +106,12 @@ func (authErr *AuthError) Error() string {
 
 type jsonError struct {
 	Err      error
-	DataKind string
+	DataKind JsonErrorDataKind
 	Data     any
 }
 
 func (jsonErr *jsonError) Error() string {
-	return jsonErr.DataKind + ": " + jsonErr.Err.Error()
+	return jsonErr.DataKind.String() + ": " + jsonErr.Err.Error()
 }
 
 func (jsonErr *jsonError) Unwrap() error {

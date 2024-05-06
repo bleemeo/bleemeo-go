@@ -34,7 +34,7 @@ func jsonReaderFrom(body Body) (io.Reader, error) {
 	if err != nil {
 		return nil, &JsonMarshalError{
 			jsonError: jsonError{
-				DataKind: "request body",
+				DataKind: JsonErrorDataKind_RequestBody,
 				Data:     body,
 				Err:      err,
 			},
@@ -56,7 +56,7 @@ func unmarshalResponse(respBody []byte, err error) (json.RawMessage, error) {
 		return nil, &JsonUnmarshalError{
 			jsonError: jsonError{
 				Err:      err,
-				DataKind: "response body",
+				DataKind: JsonErrorDataKind_RequestBody,
 				Data:     respBody, // TODO: same problem as 404 handling
 			},
 		}
