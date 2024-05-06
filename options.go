@@ -32,16 +32,6 @@ func WithCredentials(username, password string) ClientOption {
 	}
 }
 
-// WithCredentialsFromEnv will make the client retrieve and use credentials
-// from the "BLEEMEO_USER" and "BLEEMEO_PASSWORD" environment variables.
-func WithCredentialsFromEnv() ClientOption {
-	return func(c *Client) {
-		c.username = os.Getenv("BLEEMEO_USER")
-		c.password = os.Getenv("BLEEMEO_PASSWORD")
-
-	}
-}
-
 // WithEndpoint will make the client use the given endpoint over the default one.
 func WithEndpoint(endpoint string) ClientOption {
 	return func(c *Client) {
@@ -56,17 +46,51 @@ func WithOAuthClientID(clientID string) ClientOption {
 	}
 }
 
-// WithHTTPClient will make the client execute requests with the given [http.Client].
-func WithHTTPClient(client *http.Client) ClientOption {
-	return func(c *Client) {
-		c.client = client
-	}
-}
-
 // WithBleemeoAccountHeader will make the client include the given account ID
 // in the X-Bleemeo-Account request header.
 func WithBleemeoAccountHeader(accountID string) ClientOption {
 	return func(c *Client) {
 		c.customHeaders["X-Bleemeo-Account"] = accountID
+	}
+}
+
+// WithConfigurationFromEnv will make the client retrieve and use configuration options
+// defined in environment variables, such as
+//
+// - credentials: "BLEEMEO_USER" & "BLEEMEO_PASSWORD"
+//
+// - API URL: "BLEEMEO_API_URL"
+//
+// - OAuth client ID: "BLEEMEO_OAUTH_CLIENT_ID"
+//
+// - Bleemeo account ID: "BLEEMEO_ACCOUNT_ID"
+func WithConfigurationFromEnv() ClientOption {
+	return func(c *Client) {
+		if username, set := os.LookupEnv("BLEEMEO_USER"); set {
+			c.username = username
+		}
+
+		if password, set := os.LookupEnv("BLEEMEO_PASSWORD"); set {
+			c.password = password
+		}
+
+		if apiURL, set := os.LookupEnv("BLEEMEO_API_URL"); set {
+			c.endpoint = apiURL
+		}
+
+		if oAuthClientID, set := os.LookupEnv("BLEEMEO_OAUTH_CLIENT_ID"); set {
+			c.oAuthClientID = oAuthClientID
+		}
+
+		if accountID, set := os.LookupEnv("BLEEMEO_ACCOUNT_ID"); set {
+			c.customHeaders["X-Bleemeo-Account"] = accountID
+		}
+	}
+}
+
+// WithHTTPClient will make the client execute requests with the given [http.Client].
+func WithHTTPClient(client *http.Client) ClientOption {
+	return func(c *Client) {
+		c.client = client
 	}
 }

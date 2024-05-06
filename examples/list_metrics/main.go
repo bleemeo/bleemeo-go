@@ -12,9 +12,7 @@ import (
 
 func main() {
 	client, err := bleemeo.NewClient(
-		bleemeo.WithCredentialsFromEnv(),
-		bleemeo.WithEndpoint("http://localhost:8000"),
-		bleemeo.WithOAuthClientID("5c31cbfc-254a-4fb9-822d-e55c681a3d4f"),
+		bleemeo.WithConfigurationFromEnv(),
 	)
 	if err != nil {
 		log.Fatalln("Failed to initialize client:", err)
