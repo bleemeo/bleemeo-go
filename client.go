@@ -28,6 +28,11 @@ import (
 	"strings"
 )
 
+const (
+	defaultEndpoint  = "https://api.bleemeo.com"
+	defaultUserAgent = "Bleemeo Go Client"
+)
+
 type Client struct {
 	username, password  string
 	endpoint            string
@@ -46,9 +51,9 @@ type Client struct {
 // The option WithConfigurationFromEnv() might be useful for a default configuration.
 func NewClient(opts ...ClientOption) (*Client, error) {
 	c := &Client{
-		endpoint:      "https://api.bleemeo.com",
+		endpoint:      defaultEndpoint,
 		client:        new(http.Client),
-		customHeaders: map[string]string{"User-Agent": "Bleemeo Go Client"},
+		customHeaders: map[string]string{"User-Agent": defaultUserAgent},
 	}
 
 	for _, opt := range opts {

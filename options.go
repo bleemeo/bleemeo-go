@@ -39,8 +39,8 @@ func WithEndpoint(endpoint string) ClientOption {
 	}
 }
 
-// WithOAuthClientID will make the client use the given OAuth client ID/secret.
-func WithOAuthClientID(clientID, clientSecret string) ClientOption {
+// WithOAuthClient will make the client use the given OAuth client ID/secret.
+func WithOAuthClient(clientID, clientSecret string) ClientOption {
 	return func(c *Client) {
 		c.oAuthClientID = clientID
 		c.oAuthClientSecret = clientSecret
