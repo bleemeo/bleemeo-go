@@ -20,6 +20,13 @@ func main() {
 		log.Fatalln("Failed to initialize client:", err)
 	}
 
+	defer func() {
+		err := client.Logout(context.Background())
+		if err != nil {
+			log.Fatalln("Logout:", err)
+		}
+	}()
+
 	// Retrieving only the id and label of each metric:
 	// the fewer fields required, the faster the query.
 	iter := client.Iterator(bleemeo.ResourceMetric, bleemeo.Params{"fields": "id,label"})

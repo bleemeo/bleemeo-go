@@ -25,6 +25,7 @@ const errorRespMaxLength = 1 << 20 // 1MB
 
 var (
 	ErrResourceNotFound = errors.New("resource not found")
+	ErrTokenRevoke      = errors.New("failed to revoke token")
 )
 
 type apiError struct {

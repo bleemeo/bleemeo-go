@@ -63,6 +63,33 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	return c, nil
 }
 
+// Logout revokes the OAuth token and prevents it from being reused.
+func (c *Client) Logout(ctx context.Context) error {
+	currentToken, err := c.authProvider.tokenSource.Token()
+	if err != nil {
+		return fmt.Errorf("couldn't retrieve token: %w", err)
+	}
+
+	body := strings.NewReader(fmt.Sprintf("token=%s&client_id=%s", currentToken.AccessToken, c.oAuthClientID))
+	// Temporarily modifying the content type to override application/json
+	previousContentType, hadContentType := c.customHeaders["Content-Type"]
+	c.customHeaders["Content-Type"] = "application/x-www-form-urlencoded"
+
+	_, err = c.Do(ctx, http.MethodPost, "o/revoke_token/", nil, true, body)
+
+	if hadContentType {
+		c.customHeaders["Content-Type"] = previousContentType
+	} else {
+		delete(c.customHeaders, "Content-Type")
+	}
+
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrTokenRevoke, err)
+	}
+
+	return nil
+}
+
 // Get the resource with the given id, with only the given fields, if not nil.
 func (c *Client) Get(ctx context.Context, resource Resource, id string, fields Fields) (json.RawMessage, error) {
 	reqURI := fmt.Sprintf("%s/%s/", resource, id)

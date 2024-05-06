@@ -19,6 +19,13 @@ func main() {
 		log.Fatalln("Failed to initialize client:", err)
 	}
 
+	defer func() {
+		err := client.Logout(context.Background())
+		if err != nil {
+			log.Fatalln("Logout:", err)
+		}
+	}()
+
 	dashboard, err := client.Create(context.Background(), bleemeo.ResourceDashboard, bleemeo.Body{"name": "My dashboard"})
 	if err != nil {
 		log.Fatalln("Error creating dashboard:", err)

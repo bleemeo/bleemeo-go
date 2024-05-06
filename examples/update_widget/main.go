@@ -19,6 +19,13 @@ func main() {
 		log.Fatalln("Failed to initialize client:", err)
 	}
 
+	defer func() {
+		err := client.Logout(context.Background())
+		if err != nil {
+			log.Fatalln("Logout:", err)
+		}
+	}()
+
 	pageNumber, pageSize := 1, 1
 
 	resultPage, err := client.GetPage(context.Background(), bleemeo.ResourceWidget, pageNumber, pageSize, bleemeo.Params{"title": "My widget", "fields": "id"})
