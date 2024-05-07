@@ -126,7 +126,8 @@ func (c *Client) Logout(ctx context.Context) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrTokenRevoke, err)
+		// Multiple error verbs are only possible since Go1.20
+		return fmt.Errorf("%s: %w", ErrTokenRevoke, err)
 	}
 
 	if statusCode != http.StatusOK {

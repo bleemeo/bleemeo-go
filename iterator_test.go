@@ -40,6 +40,7 @@ func makeMetricMockHandler(availablePages, pageSize int) mockHandler {
 		var result ResultsPage
 
 		if currentPage <= availablePages {
+			result.Count = availablePages * pageSize
 			result.Results = makeResults(currentPage)
 
 			if currentPage < availablePages {

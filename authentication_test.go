@@ -50,13 +50,13 @@ func makeClientMockForAuth(t *testing.T, authHandler mockHandler, expectedAccess
 	return client, requestCounter, err
 }
 
-type fakeTokenSource struct {
+type tokenSourceMock struct {
 	token *oauth2.Token
 	err   error
 }
 
-func (fts fakeTokenSource) Token() (*oauth2.Token, error) {
-	return fts.token, fts.err
+func (tsm tokenSourceMock) Token() (*oauth2.Token, error) {
+	return tsm.token, tsm.err
 }
 
 func TestAuthentication(t *testing.T) {
@@ -293,7 +293,7 @@ func TestAuthentication(t *testing.T) {
 			const tokenType, accessTk = "Bearer", "access"
 
 			ap := &authenticationProvider{
-				tokenSource: fakeTokenSource{
+				tokenSource: tokenSourceMock{
 					token: &oauth2.Token{
 						AccessToken: accessTk,
 						TokenType:   tokenType,
@@ -318,6 +318,7 @@ func TestAuthentication(t *testing.T) {
 				t.Fatalf("Unexpected auth header: want %q, got %q", expectedAuthHeader, authHeader)
 			}
 		})
+
 		t.Run("invalid token", func(t *testing.T) {
 			t.Parallel()
 
@@ -330,7 +331,7 @@ func TestAuthentication(t *testing.T) {
 				},
 			}
 			ap := &authenticationProvider{
-				tokenSource: fakeTokenSource{
+				tokenSource: tokenSourceMock{
 					token: nil,
 					err:   tokenRetErr,
 				},
