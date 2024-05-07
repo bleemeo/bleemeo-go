@@ -1,11 +1,8 @@
 package bleemeo
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -14,35 +11,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
-
-const httpResponseHeader = "HTTP/1.1 %d %s\r\n\n"
-
-var errMockHandlerNotFound = errors.New("mock handler not found")
-
-type mockHandler func(r *http.Request) (statusCode int, body []byte, err error)
-
-type transportMock struct {
-	handlers map[string]mockHandler
-	counters map[string]int
-}
-
-func (tm *transportMock) RoundTrip(req *http.Request) (*http.Response, error) {
-	handler, ok := tm.handlers[req.URL.Path]
-	if !ok {
-		return nil, fmt.Errorf("%w: %q", errMockHandlerNotFound, req.URL.Path)
-	}
-
-	tm.counters[req.URL.Path]++
-
-	statusCode, body, err := handler(req)
-	if err != nil {
-		return nil, err
-	}
-
-	respData := append([]byte(fmt.Sprintf(httpResponseHeader, statusCode, http.StatusText(statusCode))), body...)
-
-	return http.ReadResponse(bufio.NewReader(bytes.NewReader(respData)), req)
-}
 
 func authMockHandler(*http.Request) (int, []byte, error) {
 	return http.StatusOK, []byte(`{"access_token": "access", "expires_in": 36000, "token_type": "Bearer", "scope": "read write", "refresh_token": "refresh"}`), nil
@@ -89,6 +57,8 @@ func makeMetricMockHandler(availablePages, pageSize int) mockHandler {
 }
 
 func makeClientMockForIteration(t *testing.T, metricHandler mockHandler, extraOpts ...ClientOption) (c *Client, requestCounter map[string]int) {
+	t.Helper()
+
 	requestCounter = make(map[string]int)
 	clientMock := &http.Client{
 		Transport: &transportMock{
@@ -149,9 +119,8 @@ func TestIterator(t *testing.T) {
 			"/o/token/":   2,
 			"/v1/metric/": 3,
 		}
-
-		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
-			t.Fatalf("Unexpected requests:\n%s", diff)
+		if diff := cmp.Diff(requestCounter, expectedRequests); diff != "" {
+			t.Fatalf("Unexpected requests (-want +got):\n%s", diff)
 		}
 	})
 
@@ -178,9 +147,8 @@ func TestIterator(t *testing.T) {
 			"/o/token/":   1, // only one call, thanks to the initial refresh token
 			"/v1/metric/": 1,
 		}
-
-		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
-			t.Fatalf("Unexpected requests:\n%s", diff)
+		if diff := cmp.Diff(requestCounter, expectedRequests); diff != "" {
+			t.Fatalf("Unexpected requests (-want +got):\n%s", diff)
 		}
 	})
 
@@ -210,8 +178,8 @@ func TestIterator(t *testing.T) {
 				Message:    "400 Bad Request",
 			},
 		}
-		if diff := cmp.Diff(expectedError, iter.Err(), cmp.AllowUnexported(ClientError{}), cmpopts.EquateEmpty()); diff != "" {
-			t.Fatalf("Unexpected error:\n%s", diff)
+		if diff := cmp.Diff(iter.Err(), expectedError, cmp.AllowUnexported(ClientError{}), cmpopts.EquateEmpty()); diff != "" {
+			t.Fatalf("Unexpected error (-want +got):\n%s", diff)
 		}
 
 		if objectsCount != 0 {
@@ -222,9 +190,8 @@ func TestIterator(t *testing.T) {
 			"/o/token/":   2,
 			"/v1/metric/": 1,
 		}
-
-		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
-			t.Fatalf("Unexpected requests:\n%s", diff)
+		if diff := cmp.Diff(requestCounter, expectedRequests); diff != "" {
+			t.Fatalf("Unexpected requests (-want +got):\n%s", diff)
 		}
 	})
 
@@ -256,8 +223,8 @@ func TestIterator(t *testing.T) {
 				Data:     invalidJsonPage,
 			},
 		}
-		if diff := cmp.Diff(expectedError, iter.Err(), cmp.AllowUnexported(JsonUnmarshalError{}, json.SyntaxError{}), cmpopts.EquateEmpty()); diff != "" {
-			t.Fatalf("Unexpected error:\n%s", diff)
+		if diff := cmp.Diff(iter.Err(), expectedError, cmp.AllowUnexported(JsonUnmarshalError{}, json.SyntaxError{}), cmpopts.EquateEmpty()); diff != "" {
+			t.Fatalf("Unexpected error (-want +got):\n%s", diff)
 		}
 
 		if objectsCount != 0 {
@@ -268,9 +235,8 @@ func TestIterator(t *testing.T) {
 			"/o/token/":   2,
 			"/v1/metric/": 1,
 		}
-
-		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
-			t.Fatalf("Unexpected requests:\n%s", diff)
+		if diff := cmp.Diff(requestCounter, expectedRequests); diff != "" {
+			t.Fatalf("Unexpected requests (-want +got):\n%s", diff)
 		}
 	})
 

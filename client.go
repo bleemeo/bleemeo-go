@@ -20,12 +20,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"golang.org/x/oauth2"
 )
 
 const (
@@ -74,6 +77,22 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	if c.oAuthInitialRefresh == "" {
 		tk, err := newCredentialsAuthProvider(c.endpoint, c.username, c.password, c.oAuthClientID, c.oAuthClientSecret, c.client).Token()
 		if err != nil {
+			if retErr := new(oauth2.RetrieveError); errors.As(err, &retErr) {
+				return nil, &AuthError{
+					ClientError: ClientError{
+						apiError: apiError{
+							ReqPath:     "/o/token/",
+							StatusCode:  retErr.Response.StatusCode,
+							ContentType: retErr.Response.Header.Get("Content-Type"),
+							Message:     retErr.ErrorDescription,
+							Err:         err,
+							Response:    retErr.Body,
+						},
+					},
+					ErrorCode: retErr.ErrorCode,
+				}
+			}
+
 			return nil, fmt.Errorf("can't retrieve OAuth token: %w", err)
 		}
 
