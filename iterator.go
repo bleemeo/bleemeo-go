@@ -35,7 +35,7 @@ type Iterator interface {
 	Err() error
 }
 
-func newIterator(c *Client, resource Resource, params Params) Iterator {
+func newIterator(c *Client, resource Resource, params Params) *iterator {
 	return &iterator{
 		c:        c,
 		resource: resource,

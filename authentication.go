@@ -26,6 +26,33 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 )
 
+type userAgentTransporter struct {
+	userAgentHeader string
+	http.RoundTripper
+}
+
+func (t userAgentTransporter) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Set("User-Agent", t.userAgentHeader)
+
+	return t.RoundTripper.RoundTrip(req)
+}
+
+func wrapTransportWithUserAgent(client *http.Client, userAgentHeader string) *http.Client {
+	c := *client // Avoid mutating the given client
+
+	initialTransport := client.Transport
+	if initialTransport == nil {
+		initialTransport = http.DefaultTransport
+	}
+
+	c.Transport = userAgentTransporter{
+		userAgentHeader: userAgentHeader,
+		RoundTripper:    initialTransport,
+	}
+
+	return &c
+}
+
 type authenticationProvider struct {
 	tokenSource oauth2.TokenSource
 }
@@ -44,6 +71,7 @@ func newCredentialsAuthProvider(endpointURL, username, password, clientID, clien
 		},
 		AuthStyle: oauth2.AuthStyleInParams,
 	}
+	client = wrapTransportWithUserAgent(client, defaultUserAgent)
 
 	return authenticationProvider{
 		tokenSource: cfg.TokenSource(context.WithValue(context.Background(), oauth2.HTTPClient, client)),
@@ -52,9 +80,10 @@ func newCredentialsAuthProvider(endpointURL, username, password, clientID, clien
 
 // newRefreshAuthProvider makes a new token source based on the given refresh token.
 // New tokens will be fetched with the "refresh_token" grant type.
-func newRefreshAuthProvider(endpointURL, clientID, refreshToken string, client *http.Client) authenticationProvider {
+func newRefreshAuthProvider(endpointURL, clientID, clientSecret, refreshToken string, client *http.Client) authenticationProvider {
 	cfg := oauth2.Config{
-		ClientID: clientID,
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
 		Endpoint: oauth2.Endpoint{
 			TokenURL:  endpointURL + "/o/token/",
 			AuthStyle: oauth2.AuthStyleInParams,
@@ -63,13 +92,14 @@ func newRefreshAuthProvider(endpointURL, clientID, refreshToken string, client *
 	initialToken := oauth2.Token{
 		RefreshToken: refreshToken,
 	}
+	client = wrapTransportWithUserAgent(client, defaultUserAgent)
 
 	return authenticationProvider{
 		tokenSource: cfg.TokenSource(context.WithValue(context.Background(), oauth2.HTTPClient, client), &initialToken),
 	}
 }
 
-func (ap authenticationProvider) token() (*oauth2.Token, error) {
+func (ap authenticationProvider) Token() (*oauth2.Token, error) {
 	return ap.tokenSource.Token()
 }
 

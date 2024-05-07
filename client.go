@@ -60,6 +60,10 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 		opt(c)
 	}
 
+	if c.oAuthClientID == "" { // Common pitfall
+		return nil, ErrNoOAuthClientIDProvided
+	}
+
 	epURL, err := url.Parse(c.endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("invalid endpoint URL: %w", err)
@@ -68,22 +72,22 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	c.epURL = epURL
 
 	if c.oAuthInitialRefresh == "" {
-		tk, err := newCredentialsAuthProvider(c.endpoint, c.username, c.password, c.oAuthClientID, c.oAuthClientSecret, c.client).token()
+		tk, err := newCredentialsAuthProvider(c.endpoint, c.username, c.password, c.oAuthClientID, c.oAuthClientSecret, c.client).Token()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("can't retrieve OAuth token: %w", err)
 		}
 
 		c.oAuthInitialRefresh = tk.RefreshToken
 	}
 
-	c.authProvider = newRefreshAuthProvider(c.endpoint, c.oAuthClientID, c.oAuthInitialRefresh, c.client)
+	c.authProvider = newRefreshAuthProvider(c.endpoint, c.oAuthClientID, c.oAuthClientSecret, c.oAuthInitialRefresh, c.client)
 
 	return c, nil
 }
 
 // Logout revokes the OAuth token and prevents it from being reused.
 func (c *Client) Logout(ctx context.Context) error {
-	currentToken, err := c.authProvider.token()
+	currentToken, err := c.authProvider.Token()
 	if err != nil {
 		return fmt.Errorf("couldn't retrieve token: %w", err)
 	}

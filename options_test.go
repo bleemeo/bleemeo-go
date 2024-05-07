@@ -35,6 +35,7 @@ func mustParseURL(t *testing.T, s string) *url.URL {
 func TestOptions(t *testing.T) {
 	oauthMockClient := &http.Client{Transport: oauthMockTransport{}}
 	defaultEndpointURL := mustParseURL(t, defaultEndpoint)
+	oauthClientOpt := WithOAuthClient("id", "") // the client ID is mandatory
 
 	cases := []struct {
 		name           string
@@ -44,22 +45,17 @@ func TestOptions(t *testing.T) {
 		expectedClient Client
 	}{
 		{
-			name: "no options",
-			expectedClient: Client{
-				endpoint:            defaultEndpoint,
-				oAuthInitialRefresh: "refresh",
-				client:              oauthMockClient,
-				customHeaders:       map[string]string{"User-Agent": defaultUserAgent},
-				epURL:               defaultEndpointURL,
-			},
+			name:          "no options",
+			expectedError: ErrNoOAuthClientIDProvided,
 		},
 		{
 			name:    "with credentials",
-			options: []ClientOption{WithCredentials("u", "p")},
+			options: []ClientOption{WithCredentials("u", "p"), oauthClientOpt},
 			expectedClient: Client{
 				username:            "u",
 				password:            "p",
 				endpoint:            defaultEndpoint,
+				oAuthClientID:       "id",
 				oAuthInitialRefresh: "refresh",
 				client:              oauthMockClient,
 				customHeaders:       map[string]string{"User-Agent": defaultUserAgent},
@@ -68,9 +64,10 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:    "with endpoint",
-			options: []ClientOption{WithEndpoint("http://my-proxy.internal")},
+			options: []ClientOption{WithEndpoint("http://my-proxy.internal"), oauthClientOpt},
 			expectedClient: Client{
 				endpoint:            "http://my-proxy.internal",
+				oAuthClientID:       "id",
 				oAuthInitialRefresh: "refresh",
 				client:              oauthMockClient,
 				customHeaders:       map[string]string{"User-Agent": defaultUserAgent},
@@ -92,9 +89,10 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:    "with Bleemeo account header",
-			options: []ClientOption{WithBleemeoAccountHeader("eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3")},
+			options: []ClientOption{WithBleemeoAccountHeader("eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3"), oauthClientOpt},
 			expectedClient: Client{
 				endpoint:            defaultEndpoint,
+				oAuthClientID:       "id",
 				oAuthInitialRefresh: "refresh",
 				client:              oauthMockClient,
 				customHeaders:       map[string]string{"User-Agent": defaultUserAgent, "X-Bleemeo-Account": "eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3"},
@@ -126,16 +124,17 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:    "with initial OAuth refresh token",
-			options: []ClientOption{WithInitialOAuthRefreshToken("initial")},
+			options: []ClientOption{WithInitialOAuthRefreshToken("initial"), oauthClientOpt},
 			expectedClient: Client{
 				endpoint:            defaultEndpoint,
+				oAuthClientID:       "id",
 				oAuthInitialRefresh: "initial",
 				client:              oauthMockClient,
 				customHeaders:       map[string]string{"User-Agent": defaultUserAgent},
 				epURL:               defaultEndpointURL,
 			},
 		},
-		// We can assume that WithHTTPClient() works since it's used in all above cases.
+		// We can assume that WithHTTPClient() works since it is used in all above cases.
 	}
 
 	for _, testCase := range cases {
@@ -154,6 +153,10 @@ func TestOptions(t *testing.T) {
 			client, err := NewClient(append(tc.options, WithHTTPClient(oauthMockClient))...)
 			if err != tc.expectedError {
 				t.Fatalf("Client initialization: got error %v, want error %v", err, tc.expectedError)
+			}
+
+			if err != nil {
+				return
 			}
 
 			cmpOpts := cmp.Options{cmp.AllowUnexported(Client{}), cmpopts.IgnoreFields(Client{}, "authProvider")}
