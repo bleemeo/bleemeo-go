@@ -266,7 +266,9 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 	}
 
 	respBuf := new(bytes.Buffer)
-	respBuf.Grow(int(resp.ContentLength))
+	if resp.ContentLength > 0 {
+		respBuf.Grow(int(resp.ContentLength))
+	}
 
 	_, err = respBuf.ReadFrom(resp.Body)
 	if err != nil {

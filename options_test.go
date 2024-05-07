@@ -34,6 +34,8 @@ func mustParseURL(t *testing.T, s string) *url.URL {
 }
 
 func TestOptions(t *testing.T) {
+	t.Parallel()
+
 	oauthMockClient := &http.Client{Transport: oauthMockTransport{}}
 	defaultEndpointURL := mustParseURL(t, defaultEndpoint)
 	oauthClientOpt := WithOAuthClient("id", "") // the client ID is mandatory
