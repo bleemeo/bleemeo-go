@@ -11,10 +11,7 @@ linters:
     - exhaustivestruct # This linter is meant to be used only for special cases. It is not recommended to use it for all files in a project.
     - exhaustruct # Same as above.
     - gci # Conflicts with gofumpt.
-    - varnamelen # I think there is too many false-positive.
-    - ireturn # Complain that interface A implementation method return an interface B... it is a requirement of interface A that is unavoidable.
     - nonamedreturns # Warn for every named return, not useful.
-    - interfacebloat # Warn when an interface has too many methods, not useful.
     # Deprecated and replaced linter.
     - maligned
     - golint
@@ -30,9 +27,6 @@ linters:
     - gocyclo
     - cyclop
     - gocognit
-
-    # Project specific disable.
-    - gomoddirectives # We sometimes need to use mod replacements to fix upgrades.
 
 linters-settings:
   nolintlint:

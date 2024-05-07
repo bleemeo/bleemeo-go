@@ -83,13 +83,13 @@ func (apiErr *apiError) Unwrap() error {
 }
 
 // A ClientError holds an error due to improper use of the API,
-// resulting in a status code in the 400 range.
+// resulting in a status code in the 4xx range.
 type ClientError struct {
 	apiError
 }
 
 // A ServerError holds an error that occurred on the server-side,
-// resulting in a status code in the 500 range.
+// resulting in a status code in the 5xx range.
 type ServerError struct {
 	apiError
 }

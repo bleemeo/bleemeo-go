@@ -57,12 +57,20 @@ func unmarshalResponse(_ int, respBody []byte, err error) (json.RawMessage, erro
 			jsonError: jsonError{
 				Err:      err,
 				DataKind: JsonErrorDataKind_RequestBody,
-				Data:     respBody, // TODO: same problem as 404 handling
+				Data:     respBody[:min(len(respBody), errorRespMaxLength)],
 			},
 		}
 	}
 
 	return raw, nil
+}
+
+func min(x, y int) int {
+	if x < y {
+		return x
+	}
+
+	return y
 }
 
 // cloneMap returns a shallow clone of the given map.

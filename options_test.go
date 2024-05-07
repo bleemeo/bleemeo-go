@@ -2,6 +2,7 @@ package bleemeo
 
 import (
 	"bufio"
+	"errors"
 	"net/http"
 	"net/url"
 	"os"
@@ -151,7 +152,7 @@ func TestOptions(t *testing.T) {
 			}
 
 			client, err := NewClient(append(tc.options, WithHTTPClient(oauthMockClient))...)
-			if err != tc.expectedError {
+			if !errors.Is(err, tc.expectedError) {
 				t.Fatalf("Client initialization: got error %v, want error %v", err, tc.expectedError)
 			}
 

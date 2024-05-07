@@ -246,60 +246,20 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 		}
 	}
 
-	if resp.StatusCode == 404 {
-		// 404 is JSON with a "detail" key
-		var details struct {
-			Detail string `json:"detail"`
-		}
-
-		err = json.NewDecoder(resp.Body).Decode(&details)
-		if err != nil {
-			// TODO: this read misses all the data already read by the JSON decoder
-			content := readBodyStart(resp.Body)
-
-			return resp.StatusCode, nil, &ClientError{
-				apiError: apiError{
-					ReqPath:     req.URL.Path,
-					StatusCode:  404,
-					ContentType: resp.Header.Get("Content-Type"),
-					Message:     resp.Status,
-					Err: &JsonUnmarshalError{
-						jsonError: jsonError{
-							DataKind: JsonErrorDataKind_404Details,
-							Err:      err,
-							Data:     content,
-						},
-					},
-					Response: content,
-				},
-			}
-		}
-
-		message := resp.Status
-		if details.Detail != "" {
-			message = details.Detail
-		}
-
-		return resp.StatusCode, nil, &ClientError{
-			apiError: apiError{
-				ReqPath:     req.URL.Path,
-				StatusCode:  404,
-				ContentType: resp.Header.Get("Content-Type"),
-				Message:     message,
-				Err:         fmt.Errorf("%w: %s", ErrResourceNotFound, req.URL.Path),
-				Response:    readBodyStart(resp.Body),
-			},
-		}
-
-	}
-
 	if resp.StatusCode >= 400 {
+		var underlyingError error
+
+		if resp.StatusCode == 404 {
+			underlyingError = fmt.Errorf("%w: %s", ErrResourceNotFound, req.URL.Path)
+		}
+
 		return resp.StatusCode, nil, &ClientError{
 			apiError: apiError{
 				ReqPath:     req.URL.Path,
 				StatusCode:  resp.StatusCode,
 				ContentType: resp.Header.Get("Content-Type"),
 				Message:     resp.Status,
+				Err:         underlyingError,
 				Response:    readBodyStart(resp.Body),
 			},
 		}
