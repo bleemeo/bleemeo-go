@@ -51,7 +51,7 @@ func WithOAuthClient(clientID, clientSecret string) ClientOption {
 // in the X-Bleemeo-Account request header.
 func WithBleemeoAccountHeader(accountID string) ClientOption {
 	return func(c *Client) {
-		c.customHeaders["X-Bleemeo-Account"] = accountID
+		c.headers["X-Bleemeo-Account"] = accountID
 	}
 }
 
@@ -88,7 +88,7 @@ func WithConfigurationFromEnv() ClientOption {
 		}
 
 		if accountID, set := os.LookupEnv("BLEEMEO_ACCOUNT_ID"); set {
-			c.customHeaders["X-Bleemeo-Account"] = accountID
+			c.headers["X-Bleemeo-Account"] = accountID
 		}
 	}
 }

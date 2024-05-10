@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"net/http"
 )
 
 // jsonReaderFrom marshals the given content to JSON,
@@ -42,6 +43,13 @@ func jsonReaderFrom(body Body) (io.Reader, error) {
 	}
 
 	return bytes.NewReader(data), nil
+}
+
+func cleanupResponse(resp *http.Response) {
+	// Ensure we read the whole response to avoid "Connection reset by peer" on server
+	// and ensure HTTP connection can be reused
+	_, _ = io.Copy(io.Discard, resp.Body)
+	_ = resp.Body.Close()
 }
 
 func unmarshalResponse(_ int, respBody []byte, err error) (json.RawMessage, error) {

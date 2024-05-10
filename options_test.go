@@ -36,11 +36,12 @@ const oauthMockResponse = `HTTP/1.1 200 OK
 type oauthMockTransport struct{}
 
 func (omt oauthMockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	rdr := bufio.NewReader(strings.NewReader(oauthMockResponse))
-	return http.ReadResponse(rdr, req)
+	return http.ReadResponse(bufio.NewReader(strings.NewReader(oauthMockResponse)), req)
 }
 
 func mustParseURL(t *testing.T, s string) *url.URL {
+	t.Helper()
+
 	u, err := url.Parse(s)
 	if err != nil {
 		t.Fatalf("Could not parse URL %q: %v", s, err)
@@ -71,51 +72,47 @@ func TestOptions(t *testing.T) {
 			name:    "with credentials",
 			options: []ClientOption{WithCredentials("u", "p"), oauthClientOpt},
 			expectedClient: Client{
-				username:            "u",
-				password:            "p",
-				endpoint:            defaultEndpoint,
-				oAuthClientID:       "id",
-				oAuthInitialRefresh: "refresh",
-				client:              oauthMockClient,
-				customHeaders:       map[string]string{"User-Agent": defaultUserAgent},
-				epURL:               defaultEndpointURL,
+				username:      "u",
+				password:      "p",
+				endpoint:      defaultEndpoint,
+				oAuthClientID: "id",
+				client:        oauthMockClient,
+				headers:       map[string]string{"User-Agent": defaultUserAgent},
+				epURL:         defaultEndpointURL,
 			},
 		},
 		{
 			name:    "with endpoint",
 			options: []ClientOption{WithEndpoint("http://my-proxy.internal"), oauthClientOpt},
 			expectedClient: Client{
-				endpoint:            "http://my-proxy.internal",
-				oAuthClientID:       "id",
-				oAuthInitialRefresh: "refresh",
-				client:              oauthMockClient,
-				customHeaders:       map[string]string{"User-Agent": defaultUserAgent},
-				epURL:               mustParseURL(t, "http://my-proxy.internal"),
+				endpoint:      "http://my-proxy.internal",
+				oAuthClientID: "id",
+				client:        oauthMockClient,
+				headers:       map[string]string{"User-Agent": defaultUserAgent},
+				epURL:         mustParseURL(t, "http://my-proxy.internal"),
 			},
 		},
 		{
 			name:    "with OAuth client ID",
 			options: []ClientOption{WithOAuthClient("123456789", "53CR37")},
 			expectedClient: Client{
-				endpoint:            defaultEndpoint,
-				oAuthClientID:       "123456789",
-				oAuthClientSecret:   "53CR37",
-				oAuthInitialRefresh: "refresh",
-				client:              oauthMockClient,
-				customHeaders:       map[string]string{"User-Agent": defaultUserAgent},
-				epURL:               defaultEndpointURL,
+				endpoint:          defaultEndpoint,
+				oAuthClientID:     "123456789",
+				oAuthClientSecret: "53CR37",
+				client:            oauthMockClient,
+				headers:           map[string]string{"User-Agent": defaultUserAgent},
+				epURL:             defaultEndpointURL,
 			},
 		},
 		{
 			name:    "with Bleemeo account header",
 			options: []ClientOption{WithBleemeoAccountHeader("eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3"), oauthClientOpt},
 			expectedClient: Client{
-				endpoint:            defaultEndpoint,
-				oAuthClientID:       "id",
-				oAuthInitialRefresh: "refresh",
-				client:              oauthMockClient,
-				customHeaders:       map[string]string{"User-Agent": defaultUserAgent, "X-Bleemeo-Account": "eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3"},
-				epURL:               defaultEndpointURL,
+				endpoint:      defaultEndpoint,
+				oAuthClientID: "id",
+				client:        oauthMockClient,
+				headers:       map[string]string{"User-Agent": defaultUserAgent, "X-Bleemeo-Account": "eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3"},
+				epURL:         defaultEndpointURL,
 			},
 		},
 		{
@@ -130,15 +127,14 @@ func TestOptions(t *testing.T) {
 			},
 			options: []ClientOption{WithConfigurationFromEnv()},
 			expectedClient: Client{
-				username:            "u",
-				password:            "p",
-				endpoint:            "http://my-proxy.internal",
-				oAuthClientID:       "123456789",
-				oAuthClientSecret:   "53CR37",
-				oAuthInitialRefresh: "refresh",
-				client:              oauthMockClient,
-				customHeaders:       map[string]string{"User-Agent": defaultUserAgent, "X-Bleemeo-Account": "eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3"},
-				epURL:               mustParseURL(t, "http://my-proxy.internal"),
+				username:          "u",
+				password:          "p",
+				endpoint:          "http://my-proxy.internal",
+				oAuthClientID:     "123456789",
+				oAuthClientSecret: "53CR37",
+				client:            oauthMockClient,
+				headers:           map[string]string{"User-Agent": defaultUserAgent, "X-Bleemeo-Account": "eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3"},
+				epURL:             mustParseURL(t, "http://my-proxy.internal"),
 			},
 		},
 		{
@@ -149,7 +145,7 @@ func TestOptions(t *testing.T) {
 				oAuthClientID:       "id",
 				oAuthInitialRefresh: "initial",
 				client:              oauthMockClient,
-				customHeaders:       map[string]string{"User-Agent": defaultUserAgent},
+				headers:             map[string]string{"User-Agent": defaultUserAgent},
 				epURL:               defaultEndpointURL,
 			},
 		},

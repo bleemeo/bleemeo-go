@@ -38,7 +38,7 @@ func makeClientMockForAuth(t *testing.T, authHandler mockHandler, expectedAccess
 	clientMock := &http.Client{
 		Transport: &transportMock{
 			handlers: map[string]mockHandler{
-				"/o/token/": authHandler,
+				tokenPath: authHandler,
 				"/o/revoke_token/": func(*http.Request) (statusCode int, body []byte, err error) {
 					return http.StatusOK, nil, nil
 				},
@@ -51,7 +51,7 @@ func makeClientMockForAuth(t *testing.T, authHandler mockHandler, expectedAccess
 
 					token := strings.TrimPrefix(authHeader, "Bearer ")
 					if token != expectedAccessTk {
-						t.Fatalf("Invalid access token: %q", token)
+						t.Fatalf("Unexpected access token: want %q, got %q", expectedAccessTk, token)
 					}
 
 					return http.StatusOK, []byte(`{}`), nil
@@ -64,15 +64,6 @@ func makeClientMockForAuth(t *testing.T, authHandler mockHandler, expectedAccess
 	client, err := NewClient(append([]ClientOption{WithHTTPClient(clientMock)}, extraOpts...)...)
 
 	return client, requestCounter, err
-}
-
-type tokenSourceMock struct {
-	token *oauth2.Token
-	err   error
-}
-
-func (tsm tokenSourceMock) Token() (*oauth2.Token, error) {
-	return tsm.token, tsm.err
 }
 
 func TestAuthentication(t *testing.T) {
@@ -135,7 +126,7 @@ func TestAuthentication(t *testing.T) {
 			return http.StatusOK, []byte(fmt.Sprintf(`{"access_token": "%s", "expires_in": %d, "token_type": "Bearer", "scope": "read write", "refresh_token": "%s"}`, accessToken, int(tokenValidity.Seconds()), refreshToken)), nil
 		}
 
-		client, requestCounter, err := makeClientMockForAuth(t, handler, secondAccessTk, WithCredentials(username, password), WithOAuthClient(clientID, clientSecret))
+		client, requestCounter, err := makeClientMockForAuth(t, handler, firstAccessTk, WithCredentials(username, password), WithOAuthClient(clientID, clientSecret))
 		if err != nil {
 			t.Fatal("Failed to init client:", err)
 		}
@@ -146,9 +137,9 @@ func TestAuthentication(t *testing.T) {
 		}
 
 		expectedToken := &oauth2.Token{
-			AccessToken:  secondAccessTk,
+			AccessToken:  firstAccessTk,
 			TokenType:    "Bearer",
-			RefreshToken: secondRefreshTk,
+			RefreshToken: firstRefreshTk,
 			Expiry:       time.Now().Add(tokenValidity),
 		}
 		if diff := cmp.Diff(token, expectedToken, cmpopts.IgnoreUnexported(oauth2.Token{}), cmpopts.EquateApproxTime(time.Minute)); diff != "" {
@@ -160,13 +151,24 @@ func TestAuthentication(t *testing.T) {
 			t.Fatal("Failed to execute request:", err)
 		}
 
+		// TODO: test refresh / refetch
+		/*err = client.authProvider.refetchToken()
+		if err != nil {
+			t.Fatal("Failed to refetch token:", err)
+		}
+
+		_, err = client.Get(context.Background(), ResourceAgent, "<id>", DefaultFields)
+		if err != nil {
+			t.Fatal("Failed to execute request:", err)
+		}*/
+
 		err = client.Logout(context.Background())
 		if err != nil {
 			t.Fatal("Failed to logout:", err)
 		}
 
 		expectedRequests := map[string]int{
-			"/o/token/":        2,
+			tokenPath:          1,
 			"/o/revoke_token/": 1,
 			"/v1/agent/<id>/":  1,
 		}
@@ -252,7 +254,7 @@ func TestAuthentication(t *testing.T) {
 		}
 
 		expectedRequests := map[string]int{
-			"/o/token/":        1,
+			tokenPath:          1,
 			"/o/revoke_token/": 1,
 			"/v1/agent/<id>/":  1,
 		}
@@ -269,12 +271,25 @@ func TestAuthentication(t *testing.T) {
 			return http.StatusBadRequest, respData, nil
 		}
 
-		_, requestCounter, err := makeClientMockForAuth(t, handler, "", WithCredentials("bad", "creds"), WithOAuthClient("id", ""))
+		client, requestCounter, err := makeClientMockForAuth(t, handler, "", WithCredentials("bad", "creds"), WithOAuthClient("id", ""))
+		if err != nil {
+			t.Fatal("Unexpected error:", err)
+		}
+
+		_, err = client.Get(context.Background(), ResourceAgent, "<id>", DefaultFields)
+		if err == nil {
+			t.Fatal("Expected an error, got none.")
+		}
+
+		unwrappErr, ok := err.(interface{ Unwrap() error })
+		if !ok {
+			t.Fatalf("Can't unwrap error of type %T", err)
+		}
 
 		expectedErr := &AuthError{
 			ClientError: ClientError{
 				apiError{
-					ReqPath:     "/o/token/",
+					ReqPath:     "/v1/agent/<id>/",
 					StatusCode:  400,
 					ContentType: "",
 					Message:     "Invalid credentials given.",
@@ -288,12 +303,12 @@ func TestAuthentication(t *testing.T) {
 			},
 			ErrorCode: "invalid_grant",
 		}
-		if diff := cmp.Diff(err, expectedErr, cmp.AllowUnexported(ClientError{}), cmpopts.IgnoreFields(oauth2.RetrieveError{}, "Response")); diff != "" {
+		if diff := cmp.Diff(unwrappErr.Unwrap(), expectedErr, cmp.AllowUnexported(ClientError{}), cmpopts.IgnoreFields(oauth2.RetrieveError{}, "Response")); diff != "" {
 			t.Fatalf("Unexpected token (-want +got):\n%s", diff)
 		}
 
 		expectedRequests := map[string]int{
-			"/o/token/": 1,
+			tokenPath: 1,
 		}
 		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
 			t.Fatalf("Unexpected requests:\n%s", diff)
@@ -309,12 +324,11 @@ func TestAuthentication(t *testing.T) {
 			const tokenType, accessTk = "Bearer", "access"
 
 			ap := &authenticationProvider{
-				tokenSource: tokenSourceMock{
-					token: &oauth2.Token{
+				newToken: func(context.Context) (*oauth2.Token, error) {
+					return &oauth2.Token{
 						AccessToken: accessTk,
 						TokenType:   tokenType,
-					},
-					err: nil,
+					}, nil
 				},
 			}
 
@@ -347,9 +361,8 @@ func TestAuthentication(t *testing.T) {
 				},
 			}
 			ap := &authenticationProvider{
-				tokenSource: tokenSourceMock{
-					token: nil,
-					err:   tokenRetErr,
+				newToken: func(context.Context) (*oauth2.Token, error) {
+					return nil, tokenRetErr
 				},
 			}
 

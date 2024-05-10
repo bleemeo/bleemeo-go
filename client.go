@@ -20,15 +20,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
-
-	"golang.org/x/oauth2"
 )
 
 const (
@@ -43,20 +41,20 @@ type Client struct {
 	oAuthClientSecret   string
 	oAuthInitialRefresh string
 	client              *http.Client
-	customHeaders       map[string]string
+	headers             map[string]string
 
 	epURL        *url.URL
-	authProvider authenticationProvider
+	authProvider *authenticationProvider
 }
 
 // NewClient initializes a Bleemeo API client with the given options.
-// The credentials should be provided by some option.
+// The credentials must be provided by some option.
 // The option WithConfigurationFromEnv() might be useful for a default configuration.
 func NewClient(opts ...ClientOption) (*Client, error) {
 	c := &Client{
-		endpoint:      defaultEndpoint,
-		client:        new(http.Client),
-		customHeaders: map[string]string{"User-Agent": defaultUserAgent},
+		endpoint: defaultEndpoint,
+		client:   new(http.Client),
+		headers:  map[string]string{"User-Agent": defaultUserAgent},
 	}
 
 	for _, opt := range opts {
@@ -74,37 +72,16 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 
 	c.epURL = epURL
 
-	if c.oAuthInitialRefresh == "" {
-		tk, err := newCredentialsAuthProvider(c.endpoint, c.username, c.password, c.oAuthClientID, c.oAuthClientSecret, c.client).Token()
-		if err != nil {
-			if retErr := new(oauth2.RetrieveError); errors.As(err, &retErr) {
-				return nil, &AuthError{
-					ClientError: ClientError{
-						apiError: apiError{
-							ReqPath:     "/o/token/",
-							StatusCode:  retErr.Response.StatusCode,
-							ContentType: retErr.Response.Header.Get("Content-Type"),
-							Message:     retErr.ErrorDescription,
-							Err:         err,
-							Response:    retErr.Body,
-						},
-					},
-					ErrorCode: retErr.ErrorCode,
-				}
-			}
-
-			return nil, fmt.Errorf("can't retrieve OAuth token: %w", err)
-		}
-
-		c.oAuthInitialRefresh = tk.RefreshToken
+	if c.oAuthInitialRefresh != "" {
+		c.authProvider = newRefreshAuthProvider(c.endpoint, c.oAuthClientID, c.oAuthClientSecret, c.oAuthInitialRefresh, c.client)
+	} else {
+		c.authProvider = newCredentialsAuthProvider(c.endpoint, c.username, c.password, c.oAuthClientID, c.oAuthClientSecret, c.client)
 	}
-
-	c.authProvider = newRefreshAuthProvider(c.endpoint, c.oAuthClientID, c.oAuthClientSecret, c.oAuthInitialRefresh, c.client)
 
 	return c, nil
 }
 
-// Logout revokes the OAuth token and prevents it from being reused.
+// Logout revokes the OAuth token, preventing it from being reused.
 func (c *Client) Logout(ctx context.Context) error {
 	currentToken, err := c.authProvider.Token()
 	if err != nil {
@@ -114,20 +91,20 @@ func (c *Client) Logout(ctx context.Context) error {
 	// Revoking the refresh token will also revoke the related access token
 	body := strings.NewReader(fmt.Sprintf("client_id=%s&token_type_hint=refresh_token&token=%s", c.oAuthClientID, currentToken.RefreshToken))
 	// Temporarily modifying the content type to override application/json
-	previousContentType, hadContentType := c.customHeaders["Content-Type"]
-	c.customHeaders["Content-Type"] = "application/x-www-form-urlencoded"
+	previousContentType, hadContentType := c.headers["Content-Type"]
+	c.headers["Content-Type"] = "application/x-www-form-urlencoded"
 
 	statusCode, _, err := c.Do(ctx, http.MethodPost, "o/revoke_token/", nil, true, body)
 
 	if hadContentType {
-		c.customHeaders["Content-Type"] = previousContentType
+		c.headers["Content-Type"] = previousContentType
 	} else {
-		delete(c.customHeaders, "Content-Type")
+		delete(c.headers, "Content-Type")
 	}
 
 	if err != nil {
 		// Multiple error verbs are only possible since Go1.20
-		return fmt.Errorf("%s: %w", ErrTokenRevoke, err)
+		return fmt.Errorf("%s: %w", ErrTokenRevoke.Error(), err)
 	}
 
 	if statusCode != http.StatusOK {
@@ -211,53 +188,42 @@ func (c *Client) Delete(ctx context.Context, resource Resource, id string) error
 func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, authenticated bool, body io.Reader) (int, []byte, error) {
 	reqURL, err := c.epURL.Parse(reqURI)
 	if err != nil {
-		return 0, nil, err
+		return 0, nil, fmt.Errorf("bad request URI: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, reqURL.String(), body)
-	if err != nil {
-		return 0, nil, err
-	}
-
-	q := req.URL.Query()
+	q := reqURL.Query()
 
 	for key, value := range params {
 		q.Set(key, value)
 	}
 
-	req.URL.RawQuery = q.Encode()
+	reqURL.RawQuery = q.Encode()
 
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+	resp, err := c.do(ctx, method, reqURL.String(), authenticated, body)
+	if err != nil {
+		return 0, nil, fmt.Errorf("request execution failed: %w", err)
 	}
 
-	if authenticated {
-		err = c.authProvider.injectHeader(req)
+	if resp.StatusCode == 401 {
+		cleanupResponse(resp)
+
+		err = c.authProvider.refetchToken()
 		if err != nil {
-			return 0, nil, err
+			return 0, nil, fmt.Errorf("failed to refetch token: %w", err)
+		}
+
+		resp, err = c.do(ctx, method, reqURL.String(), authenticated, body)
+		if err != nil {
+			return 0, nil, fmt.Errorf("request execution retry failed: %w", err)
 		}
 	}
 
-	for header, value := range c.customHeaders {
-		req.Header.Set(header, value)
-	}
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return 0, nil, err
-	}
-
-	defer func() {
-		// Ensure we read the whole response to avoid "Connection reset by peer" on server
-		// and ensure HTTP connection can be reused
-		_, _ = io.Copy(io.Discard, resp.Body)
-		_ = resp.Body.Close()
-	}()
+	defer cleanupResponse(resp)
 
 	if resp.StatusCode >= 500 {
 		return resp.StatusCode, nil, &ServerError{
 			apiError: apiError{
-				ReqPath:     req.URL.Path,
+				ReqPath:     reqURL.Path,
 				StatusCode:  resp.StatusCode,
 				ContentType: resp.Header.Get("Content-Type"),
 				Message:     resp.Status,
@@ -267,22 +233,54 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 	}
 
 	if resp.StatusCode >= 400 {
-		var underlyingError error
-
-		if resp.StatusCode == 404 {
-			underlyingError = fmt.Errorf("%w: %s", ErrResourceNotFound, req.URL.Path)
-		}
-
-		return resp.StatusCode, nil, &ClientError{
+		bodyStart := readBodyStart(resp.Body)
+		clientErr := ClientError{
 			apiError: apiError{
-				ReqPath:     req.URL.Path,
+				ReqPath:     reqURL.Path,
 				StatusCode:  resp.StatusCode,
 				ContentType: resp.Header.Get("Content-Type"),
 				Message:     resp.Status,
-				Err:         underlyingError,
-				Response:    readBodyStart(resp.Body),
+				Response:    bodyStart,
 			},
 		}
+
+		if resp.StatusCode == 401 {
+			var respBody struct {
+				Detail   string `json:"detail"`
+				Code     string `json:"code"`
+				Messages []struct {
+					TokenClass string `json:"token_class"`
+					TokenType  string `json:"token_type"`
+					Message    string `json:"message"`
+				} `json:"messages"`
+			}
+
+			err = json.Unmarshal(bodyStart, &respBody)
+			if err != nil {
+				clientErr.Err = &JsonUnmarshalError{
+					jsonError{
+						Err:      err,
+						DataKind: JsonErrorDataKind_401Details,
+						Data:     bodyStart,
+					},
+				}
+			} else {
+				if len(respBody.Messages) > 0 {
+					clientErr.Message = respBody.Messages[0].Message
+				} else {
+					clientErr.Message = respBody.Detail // probably less explicit than the above message
+				}
+
+				return resp.StatusCode, nil, &AuthError{
+					ClientError: clientErr,
+					ErrorCode:   respBody.Code,
+				}
+			}
+		} else if resp.StatusCode == 404 {
+			clientErr.Err = fmt.Errorf("%w: %s", ErrResourceNotFound, reqURL.Path)
+		}
+
+		return resp.StatusCode, nil, &clientErr
 	}
 
 	respBuf := new(bytes.Buffer)
@@ -294,7 +292,7 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 	if err != nil {
 		return resp.StatusCode, nil, &ServerError{
 			apiError: apiError{
-				ReqPath:     req.URL.Path,
+				ReqPath:     reqURL.Path,
 				StatusCode:  resp.StatusCode,
 				ContentType: resp.Header.Get("Content-Type"),
 				Message:     "can't read response body",
@@ -305,4 +303,35 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 	}
 
 	return resp.StatusCode, respBuf.Bytes(), nil
+}
+
+func (c *Client) do(ctx context.Context, method, reqURL string, authenticated bool, reqBody io.Reader) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, method, reqURL, reqBody)
+	if err != nil {
+		return nil, err
+	}
+
+	if reqBody != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	if authenticated {
+		err = c.authProvider.injectHeader(req)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for header, value := range c.headers {
+		req.Header.Set(header, value)
+	}
+
+	log.Println("Executing request", reqURL)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }

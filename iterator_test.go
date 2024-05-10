@@ -80,7 +80,7 @@ func makeClientMockForIteration(t *testing.T, metricHandler mockHandler, extraOp
 	clientMock := &http.Client{
 		Transport: &transportMock{
 			handlers: map[string]mockHandler{
-				"/o/token/":   authMockHandler,
+				tokenPath:     authMockHandler,
 				"/v1/metric/": metricHandler,
 			},
 			counters: requestCounter,
@@ -133,7 +133,7 @@ func TestIterator(t *testing.T) {
 		}
 
 		expectedRequests := map[string]int{
-			"/o/token/":   2,
+			tokenPath:     1,
 			"/v1/metric/": 3,
 		}
 		if diff := cmp.Diff(requestCounter, expectedRequests); diff != "" {
@@ -161,7 +161,7 @@ func TestIterator(t *testing.T) {
 		}
 
 		expectedRequests := map[string]int{
-			"/o/token/":   1, // only one call, thanks to the initial refresh token
+			tokenPath:     1, // only one call, thanks to the initial refresh token
 			"/v1/metric/": 1,
 		}
 		if diff := cmp.Diff(requestCounter, expectedRequests); diff != "" {
@@ -204,7 +204,7 @@ func TestIterator(t *testing.T) {
 		}
 
 		expectedRequests := map[string]int{
-			"/o/token/":   2,
+			tokenPath:     1,
 			"/v1/metric/": 1,
 		}
 		if diff := cmp.Diff(requestCounter, expectedRequests); diff != "" {
@@ -249,7 +249,7 @@ func TestIterator(t *testing.T) {
 		}
 
 		expectedRequests := map[string]int{
-			"/o/token/":   2,
+			tokenPath:     1,
 			"/v1/metric/": 1,
 		}
 		if diff := cmp.Diff(requestCounter, expectedRequests); diff != "" {

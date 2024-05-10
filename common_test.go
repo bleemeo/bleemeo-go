@@ -50,5 +50,5 @@ func (tm *transportMock) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	respData := append([]byte(fmt.Sprintf(httpResponseHeader, statusCode, http.StatusText(statusCode))), body...)
 
-	return http.ReadResponse(bufio.NewReader(bytes.NewReader(respData)), req)
+	return http.ReadResponse(bufio.NewReader(bytes.NewReader(respData)), req) //nolint:wrapcheck
 }

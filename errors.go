@@ -25,6 +25,7 @@ const errorRespMaxLength = 1 << 20 // 1MB
 
 var (
 	ErrNoOAuthClientIDProvided = errors.New("no OAuth Client ID provided")
+	ErrTokenIsRefreshOnly      = errors.New("the OAuth token can only be refreshed")
 	ErrResourceNotFound        = errors.New("resource not found")
 	ErrTokenRevoke             = errors.New("failed to revoke token")
 )
@@ -32,7 +33,8 @@ var (
 type JsonErrorDataKind int
 
 const (
-	JsonErrorDataKind_404Details JsonErrorDataKind = iota
+	JsonErrorDataKind_401Details JsonErrorDataKind = iota
+	JsonErrorDataKind_404Details
 	JsonErrorDataKind_ResultPage
 	JsonErrorDataKind_RequestBody
 )
