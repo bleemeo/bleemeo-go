@@ -18,6 +18,10 @@ package bleemeo
 
 import (
 	"encoding/json"
+	"fmt"
+	"reflect"
+
+	"github.com/go-viper/mapstructure/v2"
 )
 
 // DefaultFields will make the API to return the model's basic fields.
@@ -49,3 +53,21 @@ type (
 		Results  []json.RawMessage `json:"results"`
 	}
 )
+
+// MakeBodyFrom converts the given value to a [Body].
+// The value must be a map or a struct.
+func MakeBodyFrom(v any) (Body, error) {
+	vKind := reflect.ValueOf(v).Kind()
+	if vKind != reflect.Map && vKind != reflect.Struct {
+		return nil, fmt.Errorf("%w, not a %T", ErrBodyNotMapOrStruct, v)
+	}
+
+	var body Body
+
+	err := mapstructure.Decode(v, &body)
+	if err != nil {
+		return body, fmt.Errorf("can't convert the given body: %w", err)
+	}
+
+	return body, nil
+}
