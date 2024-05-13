@@ -34,7 +34,7 @@ func jsonReaderFrom(body Body) (io.Reader, error) {
 	data, err := json.Marshal(body)
 	if err != nil {
 		return nil, &JSONMarshalError{
-			jsonError: jsonError{
+			jsonError: &jsonError{
 				DataKind: JsonErrorDataKind_RequestBody,
 				Data:     body,
 				Err:      err,
@@ -62,7 +62,7 @@ func unmarshalResponse(_ int, respBody []byte, err error) (json.RawMessage, erro
 	err = json.Unmarshal(respBody, &raw)
 	if err != nil {
 		return nil, &JSONUnmarshalError{
-			jsonError: jsonError{
+			jsonError: &jsonError{
 				Err:      err,
 				DataKind: JsonErrorDataKind_RequestBody,
 				Data:     respBody[:min(len(respBody), errorRespMaxLength)],

@@ -59,7 +59,7 @@ func TestJsonReaderFrom(t *testing.T) {
 		}
 
 		expectedErr := &JSONMarshalError{
-			jsonError{
+			&jsonError{
 				Err:      &json.UnsupportedTypeError{},
 				DataKind: JsonErrorDataKind_RequestBody,
 				Data:     data,

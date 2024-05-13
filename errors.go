@@ -90,24 +90,36 @@ func (apiErr *apiError) Unwrap() error {
 // A ClientError holds an error due to improper use of the API,
 // resulting in a status code in the 4xx range.
 type ClientError struct {
-	apiError
+	*apiError
+}
+
+func (clientErr *ClientError) Unwrap() error {
+	return clientErr.apiError
 }
 
 // A ServerError holds an error that occurred on the server-side,
 // resulting in a status code in the 5xx range.
 type ServerError struct {
-	apiError
+	*apiError
+}
+
+func (serverErr *ServerError) Unwrap() error {
+	return serverErr.apiError
 }
 
 // An AuthError holds an error due to unspecified or invalid credentials.
 type AuthError struct {
-	ClientError
+	*ClientError
 	// ErrorCode is RFC 6749's 'error' parameter.
 	ErrorCode string
 }
 
 func (authErr *AuthError) Error() string {
 	return "authentication error: " + authErr.Err.Error()
+}
+
+func (authErr *AuthError) Unwrap() error {
+	return authErr.ClientError
 }
 
 type jsonError struct {
@@ -125,7 +137,7 @@ func (jsonErr *jsonError) Unwrap() error {
 }
 
 type JSONMarshalError struct {
-	jsonError
+	*jsonError
 }
 
 func (jme *JSONMarshalError) Error() string {
@@ -133,7 +145,7 @@ func (jme *JSONMarshalError) Error() string {
 }
 
 type JSONUnmarshalError struct {
-	jsonError
+	*jsonError
 }
 
 func (jme *JSONUnmarshalError) Error() string {

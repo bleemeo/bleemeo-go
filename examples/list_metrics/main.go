@@ -56,7 +56,16 @@ func main() {
 
 	if err = iter.Err(); err != nil {
 		if authErr := new(bleemeo.AuthError); errors.As(err, &authErr) {
+			// An AuthError is also a ClientError
 			log.Fatalln("Authentication error:", authErr.ErrorCode, "/", authErr.Message)
+		}
+
+		if clientErr := new(bleemeo.ClientError); errors.As(err, &clientErr) {
+			log.Fatalln("Client error:", clientErr.StatusCode, "-", clientErr.Message)
+		}
+
+		if serverErr := new(bleemeo.ServerError); errors.As(err, &serverErr) {
+			log.Fatalln("Server error:", serverErr.StatusCode, "-", serverErr.Message)
 		}
 
 		log.Fatalln("Iteration error:", err)

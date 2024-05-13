@@ -107,7 +107,7 @@ func (iter *iterator) fetchPage(ctx context.Context) (ok bool) {
 	err = json.Unmarshal(resp, &page)
 	if err != nil {
 		iter.err = &JSONUnmarshalError{
-			jsonError: jsonError{
+			jsonError: &jsonError{
 				Err:      err,
 				DataKind: JsonErrorDataKind_ResultPage,
 				Data:     resp,

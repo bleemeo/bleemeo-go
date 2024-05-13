@@ -336,8 +336,8 @@ func TestAuthentication(t *testing.T) {
 		}
 
 		expectedErr := &AuthError{
-			ClientError: ClientError{
-				apiError{
+			ClientError: &ClientError{
+				&apiError{
 					ReqPath:     "/v1/agent/<id>/",
 					StatusCode:  400,
 					ContentType: "",
@@ -429,8 +429,8 @@ func TestAuthentication(t *testing.T) {
 			}
 
 			expectedErr := &AuthError{
-				ClientError: ClientError{
-					apiError{
+				ClientError: &ClientError{
+					&apiError{
 						ReqPath:     "/route",
 						StatusCode:  400,
 						ContentType: "application/json",

@@ -199,7 +199,7 @@ func TestIterator(t *testing.T) {
 		}
 
 		expectedError := &ClientError{
-			apiError{
+			&apiError{
 				ReqPath:    "/v1/metric/",
 				StatusCode: 400,
 				Message:    "400 Bad Request",
@@ -245,7 +245,7 @@ func TestIterator(t *testing.T) {
 		}
 
 		expectedError := &JSONUnmarshalError{
-			jsonError: jsonError{
+			jsonError: &jsonError{
 				// Reproducing the expected error, since we can't build it ourselves
 				Err:      json.Unmarshal(invalidJSONPage, new(json.RawMessage)),
 				DataKind: JsonErrorDataKind_ResultPage,

@@ -115,7 +115,7 @@ func (c *Client) GetPage(
 	err = json.Unmarshal(resp, &resultPage)
 	if err != nil {
 		return ResultsPage{}, &JSONUnmarshalError{
-			jsonError: jsonError{
+			jsonError: &jsonError{
 				Err:      err,
 				DataKind: JsonErrorDataKind_ResultPage,
 				Data:     resp,
@@ -200,7 +200,7 @@ func (c *Client) Do(
 
 	if resp.StatusCode >= 500 {
 		return resp.StatusCode, nil, &ServerError{
-			apiError: apiError{
+			apiError: &apiError{
 				ReqPath:     reqURL.Path,
 				StatusCode:  resp.StatusCode,
 				ContentType: resp.Header.Get("Content-Type"),
@@ -213,7 +213,7 @@ func (c *Client) Do(
 	if resp.StatusCode >= 400 {
 		bodyStart := readBodyStart(resp.Body)
 		clientErr := ClientError{
-			apiError: apiError{
+			apiError: &apiError{
 				ReqPath:     reqURL.Path,
 				StatusCode:  resp.StatusCode,
 				ContentType: resp.Header.Get("Content-Type"),
@@ -236,7 +236,7 @@ func (c *Client) Do(
 			err = json.Unmarshal(bodyStart, &respBody)
 			if err != nil {
 				clientErr.Err = &JSONUnmarshalError{
-					jsonError{
+					&jsonError{
 						Err:      err,
 						DataKind: JsonErrorDataKind_401Details,
 						Data:     bodyStart,
@@ -250,7 +250,7 @@ func (c *Client) Do(
 				}
 
 				return resp.StatusCode, nil, &AuthError{
-					ClientError: clientErr,
+					ClientError: &clientErr,
 					ErrorCode:   respBody.Code,
 				}
 			}
@@ -269,7 +269,7 @@ func (c *Client) Do(
 	_, err = respBuf.ReadFrom(resp.Body)
 	if err != nil {
 		return resp.StatusCode, nil, &ServerError{
-			apiError: apiError{
+			apiError: &apiError{
 				ReqPath:     reqURL.Path,
 				StatusCode:  resp.StatusCode,
 				ContentType: resp.Header.Get("Content-Type"),
