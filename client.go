@@ -29,8 +29,9 @@ import (
 )
 
 const (
-	defaultEndpoint  = "https://api.bleemeo.com"
-	defaultUserAgent = "Bleemeo Go Client"
+	defaultEndpoint      = "https://api.bleemeo.com"
+	defaultOAuthClientID = "1fc6de3e-8750-472e-baea-3ba22bb4eb56"
+	defaultUserAgent     = "Bleemeo Go Client"
 )
 
 // Client is a helper to interact with the Bleemeo API,
@@ -53,17 +54,14 @@ type Client struct {
 // The option WithConfigurationFromEnv() might be useful for a default configuration.
 func NewClient(opts ...ClientOption) (*Client, error) {
 	c := &Client{
-		endpoint: defaultEndpoint,
-		client:   new(http.Client),
-		headers:  map[string]string{"User-Agent": defaultUserAgent},
+		endpoint:      defaultEndpoint,
+		oAuthClientID: defaultOAuthClientID,
+		client:        new(http.Client),
+		headers:       map[string]string{"User-Agent": defaultUserAgent},
 	}
 
 	for _, opt := range opts {
 		opt(c)
-	}
-
-	if c.oAuthClientID == "" { // Common pitfall
-		return nil, ErrNoOAuthClientIDProvided
 	}
 
 	epURL, err := url.Parse(c.endpoint)

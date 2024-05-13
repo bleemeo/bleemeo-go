@@ -5,12 +5,12 @@
 ## Requirements
 
 - Go1.18 or later
+- An account on [Bleemeo](https://bleemeo.com/)
 
 ### Environment
 
 At least the following options should be configured (as environment variables or with options):
 
-- OAuth client ID
 - Credentials OR initial refresh token
 
 > Ways to provide those options are referenced in the [Configuration](#configuration) section.
@@ -32,7 +32,7 @@ import (
 )
 
 func main() {
-	client, err := bleemeo.NewClient(bleemeo.WithCredentialsFromEnv())
+	client, err := bleemeo.NewClient(bleemeo.WithConfigurationFromEnv())
 	if err != nil {
 		log.Fatalln("Failed to initialize client:", err)
 	}
@@ -44,7 +44,7 @@ func main() {
 		}
 	}()
 
-	metric, err := client.Get(context.Background(), bleemeo.Metric, "<the metric UUID>", bleemeo.DefaultFields)
+	metric, err := client.Get(context.Background(), bleemeo.ResourceMetric, "<the metric UUID>", bleemeo.DefaultFields)
 	if err != nil {
 		log.Fatalln("Failed to retrieve metric:", err)
 	}
@@ -72,8 +72,8 @@ func main() {
 | Property               | Option function                       | Env variable(s)                                           |
 |------------------------|---------------------------------------|-----------------------------------------------------------|
 | Credentials            | `WithCredentials(username, password)` | `BLEEMEO_USER` & `BLEEMEO_PASSWORD`                       |
-| Endpoint URL           | `WithEndpoint(endpoint)`              | `BLEEMEO_API_URL`                                         |
-| OAuth client ID/secret | `WithOAuthClient(id, secret)`         | `BLEEMEO_OAUTH_CLIENT_ID` & `BLEEMEO_OAUTH_CLIENT_SECRET` |
 | Bleemeo account header | `WithBleemeoAccountHeader(accountID)` | `BLEEMEO_ACCOUNT_ID`                                      |
+| OAuth client ID/secret | `WithOAuthClient(id, secret)`         | `BLEEMEO_OAUTH_CLIENT_ID` & `BLEEMEO_OAUTH_CLIENT_SECRET` |
+| Endpoint URL           | `WithEndpoint(endpoint)`              | `BLEEMEO_API_URL`                                         |
 | Initial refresh token  | `WithInitialOAuthRefreshToken(token)` | `BLEEMEO_OAUTH_INITIAL_REFRESH_TOKEN`                     |
 | HTTP client            | `WithHTTPClient(client)`              | -                                                         |

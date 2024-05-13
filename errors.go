@@ -24,11 +24,11 @@ import (
 const errorRespMaxLength = 1 << 20 // 1MB
 
 var (
-	ErrNoOAuthClientIDProvided = errors.New("no OAuth Client ID provided")
-	ErrTokenIsRefreshOnly      = errors.New("the OAuth token can only be refreshed")
-	ErrTokenHasNoRefresh       = errors.New("the OAuth token has no refresh")
-	ErrResourceNotFound        = errors.New("resource not found")
-	ErrTokenRevoke             = errors.New("failed to revoke token")
+	ErrTokenIsRefreshOnly = errors.New("the OAuth token can only be refreshed")
+	ErrTokenHasNoRefresh  = errors.New("the OAuth token has no refresh")
+	ErrTokenRevoke        = errors.New("failed to revoke token")
+	ErrResourceNotFound   = errors.New("resource not found")
+	ErrBodyNotMapOrStruct = errors.New("the body must be a map or a struct")
 )
 
 type JsonErrorDataKind int

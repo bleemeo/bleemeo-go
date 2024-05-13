@@ -212,19 +212,30 @@ func (ap *authenticationProvider) logout(ctx context.Context, endpoint string) e
 		return nil // No need to perform a logout
 	}
 
-	clientSecret := ""
+	endpointURL, err := url.Parse(endpoint)
+	if err != nil {
+		return err
+	}
+
+	reqURL, err := endpointURL.Parse("/o/revoke_token/")
+	if err != nil {
+		return err
+	}
+
+	values := url.Values{
+		"client_id":       {ap.clientID},
+		"token_type_hint": {"refresh_token"},
+		"token":           {ap.token.RefreshToken},
+	}
+
 	if ap.clientSecret != "" {
-		clientSecret = "&client_secret=" + ap.clientSecret
+		values.Set("client_secret", ap.clientSecret)
 	}
 
 	// Revoking the refresh token will also revoke the related access token
-	body := strings.NewReader(
-		fmt.Sprintf("client_id=%s%s&token_type_hint=refresh_token&token=%s",
-			ap.clientID, clientSecret, ap.token.RefreshToken,
-		),
-	)
+	body := strings.NewReader(values.Encode())
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint+"/o/revoke_token/", body)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL.String(), body)
 	if err != nil {
 		return fmt.Errorf("failed to parse logout request: %w", err)
 	}

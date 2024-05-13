@@ -19,6 +19,7 @@ package bleemeo
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -56,7 +57,6 @@ func TestOptions(t *testing.T) {
 
 	oauthMockClient := &http.Client{Transport: oauthMockTransport{}}
 	defaultEndpointURL := mustParseURL(t, defaultEndpoint)
-	oauthClientOpt := WithOAuthClient("id", "") // the client ID is mandatory
 
 	cases := []struct {
 		name           string
@@ -66,17 +66,23 @@ func TestOptions(t *testing.T) {
 		expectedClient Client
 	}{
 		{
-			name:          "no options",
-			expectedError: ErrNoOAuthClientIDProvided,
+			name: "no options",
+			expectedClient: Client{
+				endpoint:      defaultEndpoint,
+				oAuthClientID: defaultOAuthClientID,
+				client:        oauthMockClient,
+				headers:       map[string]string{"User-Agent": defaultUserAgent},
+				epURL:         defaultEndpointURL,
+			},
 		},
 		{
 			name:    "with credentials",
-			options: []ClientOption{WithCredentials("u", "p"), oauthClientOpt},
+			options: []ClientOption{WithCredentials("u", "p")},
 			expectedClient: Client{
 				username:      "u",
 				password:      "p",
 				endpoint:      defaultEndpoint,
-				oAuthClientID: "id",
+				oAuthClientID: defaultOAuthClientID,
 				client:        oauthMockClient,
 				headers:       map[string]string{"User-Agent": defaultUserAgent},
 				epURL:         defaultEndpointURL,
@@ -84,14 +90,23 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:    "with endpoint",
-			options: []ClientOption{WithEndpoint("http://my-proxy.internal"), oauthClientOpt},
+			options: []ClientOption{WithEndpoint("http://my-proxy.internal")},
 			expectedClient: Client{
 				endpoint:      "http://my-proxy.internal",
-				oAuthClientID: "id",
+				oAuthClientID: defaultOAuthClientID,
 				client:        oauthMockClient,
 				headers:       map[string]string{"User-Agent": defaultUserAgent},
 				epURL:         mustParseURL(t, "http://my-proxy.internal"),
 			},
+		},
+		{
+			name:    "invalid endpoint",
+			options: []ClientOption{WithEndpoint(":")},
+			expectedError: fmt.Errorf("invalid endpoint URL: %w", &url.Error{
+				Op:  "parse",
+				URL: ":",
+				Err: errors.New("missing protocol scheme"), //nolint:err113
+			}),
 		},
 		{
 			name:    "with OAuth client ID",
@@ -107,10 +122,10 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:    "with Bleemeo account header",
-			options: []ClientOption{WithBleemeoAccountHeader("eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3"), oauthClientOpt},
+			options: []ClientOption{WithBleemeoAccountHeader("eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3")},
 			expectedClient: Client{
 				endpoint:      defaultEndpoint,
-				oAuthClientID: "id",
+				oAuthClientID: defaultOAuthClientID,
 				client:        oauthMockClient,
 				headers: map[string]string{"User-Agent": defaultUserAgent,
 					"X-Bleemeo-Account": "eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3",
@@ -120,10 +135,10 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:    "with initial OAuth refresh token",
-			options: []ClientOption{WithInitialOAuthRefreshToken("initial"), oauthClientOpt},
+			options: []ClientOption{WithInitialOAuthRefreshToken("initial")},
 			expectedClient: Client{
 				endpoint:            defaultEndpoint,
-				oAuthClientID:       "id",
+				oAuthClientID:       defaultOAuthClientID,
 				oAuthInitialRefresh: "initial",
 				client:              oauthMockClient,
 				headers:             map[string]string{"User-Agent": defaultUserAgent},
@@ -173,8 +188,8 @@ func TestOptions(t *testing.T) {
 			}
 
 			client, err := NewClient(append(tc.options, WithHTTPClient(oauthMockClient))...)
-			if !errors.Is(err, tc.expectedError) {
-				t.Fatalf("Client initialization: got error %v, want error %v", err, tc.expectedError)
+			if diff := cmp.Diff(err, tc.expectedError, cmp.Comparer(errorComparer)); diff != "" {
+				t.Fatalf("Client initialization: unexpected error (-want +got):\n%s", diff)
 			}
 
 			if err != nil {
@@ -188,4 +203,8 @@ func TestOptions(t *testing.T) {
 			}
 		})
 	}
+}
+
+func errorComparer(a, b error) bool {
+	return a.Error() == b.Error()
 }
