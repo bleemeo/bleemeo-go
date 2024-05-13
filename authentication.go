@@ -143,7 +143,7 @@ func (ap *authenticationProvider) Token() (*oauth2.Token, error) {
 		ap.token, err = ap.newToken(context.Background())
 	case !ap.token.Valid():
 		if ap.token.RefreshToken == "" {
-			return nil, errors.New("invalid refresh token") // TODO
+			return nil, ErrTokenHasNoRefresh
 		}
 
 		ap.token, err = ap.refreshToken(context.Background(), ap.token.RefreshToken)
@@ -157,7 +157,7 @@ func (ap *authenticationProvider) Token() (*oauth2.Token, error) {
 	return ap.token, err
 }
 
-func (ap *authenticationProvider) refetchToken() error {
+func (ap *authenticationProvider) refetchToken(ctx context.Context) error {
 	if ap.refreshOnly {
 		return ErrTokenIsRefreshOnly
 	}
@@ -165,7 +165,7 @@ func (ap *authenticationProvider) refetchToken() error {
 	ap.l.Lock()
 	defer ap.l.Unlock()
 
-	tk, err := ap.newToken(context.Background())
+	tk, err := ap.newToken(ctx)
 	if err != nil {
 		if retErr := new(oauth2.RetrieveError); errors.As(err, &retErr) {
 			return buildAuthError(tokenPath, retErr)

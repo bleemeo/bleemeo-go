@@ -18,6 +18,7 @@ package bleemeo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -31,17 +32,15 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func makeClientMockForAuth(t *testing.T, authHandler mockHandler, expectedAccessTk string, extraOpts ...ClientOption) (c *Client, requestCounter map[string]int, err error) {
+func makeClientMockForAuth(t *testing.T, authHandler, revokeHandler mockHandler, expectedAccessTk *string, extraOpts ...ClientOption) (c *Client, requestCounter map[string]int, err error) {
 	t.Helper()
 
 	requestCounter = make(map[string]int)
 	clientMock := &http.Client{
 		Transport: &transportMock{
 			handlers: map[string]mockHandler{
-				tokenPath: authHandler,
-				"/o/revoke_token/": func(*http.Request) (statusCode int, body []byte, err error) {
-					return http.StatusOK, nil, nil
-				},
+				tokenPath:          authHandler,
+				"/o/revoke_token/": revokeHandler,
 				"/v1/agent/<id>/": func(r *http.Request) (statusCode int, body []byte, err error) {
 					authHeader := r.Header.Get("Authorization")
 
@@ -50,8 +49,9 @@ func makeClientMockForAuth(t *testing.T, authHandler mockHandler, expectedAccess
 					}
 
 					token := strings.TrimPrefix(authHeader, "Bearer ")
-					if token != expectedAccessTk {
-						t.Fatalf("Unexpected access token: want %q, got %q", expectedAccessTk, token)
+					if token != *expectedAccessTk {
+						// t.Fatalf("Unexpected access token: want %q, got %q", *expectedAccessTk, token)
+						return http.StatusUnauthorized, []byte(`{}`), nil
 					}
 
 					return http.StatusOK, []byte(`{}`), nil
@@ -79,7 +79,9 @@ func TestAuthentication(t *testing.T) {
 			tokenValidity                              = time.Hour
 		)
 
-		handler := func(r *http.Request) (statusCode int, body []byte, err error) {
+		revokeCallsCount := 0
+
+		authHandler := func(r *http.Request) (statusCode int, body []byte, err error) {
 			reqBody, err := io.ReadAll(r.Body)
 			if err != nil {
 				t.Fatal("Failed to read request body:", err)
@@ -104,8 +106,16 @@ func TestAuthentication(t *testing.T) {
 					"password":      {password},
 					"username":      {username},
 				}
-				accessToken = firstAccessTk
-				refreshToken = firstRefreshTk
+
+				tokens, ok := map[int][2]string{
+					0: {firstAccessTk, firstRefreshTk},
+					1: {secondAccessTk, secondRefreshTk},
+				}[revokeCallsCount]
+				if !ok {
+					t.Fatalf("Unexpected revoke calls count: %d (expected 2 max)", revokeCallsCount+1)
+				}
+
+				accessToken, refreshToken = tokens[0], tokens[1]
 			case "refresh_token":
 				expectedReqBody = url.Values{
 					"client_id":     {clientID},
@@ -125,8 +135,14 @@ func TestAuthentication(t *testing.T) {
 
 			return http.StatusOK, []byte(fmt.Sprintf(`{"access_token": "%s", "expires_in": %d, "token_type": "Bearer", "scope": "read write", "refresh_token": "%s"}`, accessToken, int(tokenValidity.Seconds()), refreshToken)), nil
 		}
+		revokeHandler := func(*http.Request) (statusCode int, body []byte, err error) {
+			revokeCallsCount++
 
-		client, requestCounter, err := makeClientMockForAuth(t, handler, firstAccessTk, WithCredentials(username, password), WithOAuthClient(clientID, clientSecret))
+			return http.StatusOK, nil, nil
+		}
+		expectedAccessToken := firstAccessTk
+
+		client, requestCounter, err := makeClientMockForAuth(t, authHandler, revokeHandler, &expectedAccessToken, WithCredentials(username, password), WithOAuthClient(clientID, clientSecret))
 		if err != nil {
 			t.Fatal("Failed to init client:", err)
 		}
@@ -151,16 +167,18 @@ func TestAuthentication(t *testing.T) {
 			t.Fatal("Failed to execute request:", err)
 		}
 
-		// TODO: test refresh / refetch
-		/*err = client.authProvider.refetchToken()
+		// Simulating a loss of validity from the token
+		err = client.Logout(context.Background())
 		if err != nil {
-			t.Fatal("Failed to refetch token:", err)
+			t.Fatal("Failed to logout:", err)
 		}
+
+		expectedAccessToken = secondAccessTk
 
 		_, err = client.Get(context.Background(), ResourceAgent, "<id>", DefaultFields)
 		if err != nil {
 			t.Fatal("Failed to execute request:", err)
-		}*/
+		}
 
 		err = client.Logout(context.Background())
 		if err != nil {
@@ -168,9 +186,9 @@ func TestAuthentication(t *testing.T) {
 		}
 
 		expectedRequests := map[string]int{
-			tokenPath:          1,
-			"/o/revoke_token/": 1,
-			"/v1/agent/<id>/":  1,
+			tokenPath:          2,
+			"/o/revoke_token/": 2,
+			"/v1/agent/<id>/":  3,
 		}
 		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
 			t.Fatalf("Unexpected requests:\n%s", diff)
@@ -186,7 +204,7 @@ func TestAuthentication(t *testing.T) {
 			tokenValidity                          = 10 * time.Hour
 		)
 
-		handler := func(r *http.Request) (statusCode int, body []byte, err error) {
+		authHandler := func(r *http.Request) (statusCode int, body []byte, err error) {
 			reqBody, err := io.ReadAll(r.Body)
 			if err != nil {
 				t.Fatal("Failed to read request body:", err)
@@ -222,8 +240,12 @@ func TestAuthentication(t *testing.T) {
 
 			return http.StatusOK, []byte(fmt.Sprintf(`{"access_token": "%s", "expires_in": %d, "token_type": "Bearer", "scope": "read write", "refresh_token": "%s"}`, accessToken, int(tokenValidity.Seconds()), refreshToken)), nil
 		}
+		revokeHandler := func(*http.Request) (statusCode int, body []byte, err error) {
+			return http.StatusOK, nil, nil
+		}
+		expectedAccessToken := firstAccessTk
 
-		client, requestCounter, err := makeClientMockForAuth(t, handler, firstAccessTk, WithInitialOAuthRefreshToken(initialRefresh), WithOAuthClient(clientID, clientSecret))
+		client, requestCounter, err := makeClientMockForAuth(t, authHandler, revokeHandler, &expectedAccessToken, WithInitialOAuthRefreshToken(initialRefresh), WithOAuthClient(clientID, clientSecret))
 		if err != nil {
 			t.Fatal("Failed to init client:", err)
 		}
@@ -248,6 +270,11 @@ func TestAuthentication(t *testing.T) {
 			t.Fatal("Failed to execute request:", err)
 		}
 
+		err = client.authProvider.refetchToken(context.Background())
+		if !errors.Is(err, ErrTokenIsRefreshOnly) {
+			t.Fatalf("Expected refetch to fail with %v, got %v:", ErrTokenIsRefreshOnly, err)
+		}
+
 		err = client.Logout(context.Background())
 		if err != nil {
 			t.Fatal("Failed to logout:", err)
@@ -267,11 +294,14 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		respData := []byte(`{"error": "invalid_grant", "error_description": "Invalid credentials given."}`)
-		handler := func(r *http.Request) (statusCode int, body []byte, err error) {
+		authHandler := func(*http.Request) (statusCode int, body []byte, err error) {
 			return http.StatusBadRequest, respData, nil
 		}
+		revokeHandler := func(*http.Request) (statusCode int, body []byte, err error) {
+			return http.StatusOK, nil, nil
+		}
 
-		client, requestCounter, err := makeClientMockForAuth(t, handler, "", WithCredentials("bad", "creds"), WithOAuthClient("id", ""))
+		client, requestCounter, err := makeClientMockForAuth(t, authHandler, revokeHandler, new(string), WithCredentials("bad", "creds"), WithOAuthClient("id", ""))
 		if err != nil {
 			t.Fatal("Unexpected error:", err)
 		}
@@ -344,6 +374,7 @@ func TestAuthentication(t *testing.T) {
 
 			authHeader := req.Header.Get("Authorization")
 			expectedAuthHeader := tokenType + " " + accessTk
+
 			if authHeader != expectedAuthHeader {
 				t.Fatalf("Unexpected auth header: want %q, got %q", expectedAuthHeader, authHeader)
 			}
