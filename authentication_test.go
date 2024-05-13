@@ -197,7 +197,7 @@ func TestAuthentication(t *testing.T) {
 		expectedRequests := map[string]int{
 			tokenPath:          2,
 			"/o/revoke_token/": 2,
-			"/v1/agent/<id>/":  3,
+			"/v1/agent/<id>/":  2,
 		}
 		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
 			t.Fatalf("Unexpected requests:\n%s", diff)

@@ -86,39 +86,7 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 
 // Logout revokes the OAuth token, preventing it from being reused.
 func (c *Client) Logout(ctx context.Context) error {
-	currentToken, err := c.authProvider.Token(ctx)
-	if err != nil {
-		return fmt.Errorf("couldn't retrieve token: %w", err)
-	}
-
-	// Revoking the refresh token will also revoke the related access token
-	body := strings.NewReader(
-		fmt.Sprintf("client_id=%s&token_type_hint=refresh_token&token=%s",
-			c.oAuthClientID, currentToken.RefreshToken,
-		),
-	)
-	// Temporarily modifying the content type to override application/json
-	previousContentType, hadContentType := c.headers["Content-Type"]
-	c.headers["Content-Type"] = "application/x-www-form-urlencoded"
-
-	statusCode, _, err := c.Do(ctx, http.MethodPost, "o/revoke_token/", nil, true, body)
-
-	if hadContentType {
-		c.headers["Content-Type"] = previousContentType
-	} else {
-		delete(c.headers, "Content-Type")
-	}
-
-	if err != nil {
-		// Multiple error verbs are only possible since Go1.20
-		return fmt.Errorf("%s: %w", ErrTokenRevoke.Error(), err)
-	}
-
-	if statusCode != http.StatusOK {
-		return fmt.Errorf("%w: server replyed with status code %d", ErrTokenRevoke, statusCode)
-	}
-
-	return nil
+	return c.authProvider.logout(ctx, c.endpoint)
 }
 
 // Get the resource with the given id, with only the given fields, if not nil.

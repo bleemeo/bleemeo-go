@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 
 	"golang.org/x/oauth2"
@@ -82,7 +83,8 @@ func newRefresher(endpointURL, clientID, clientSecret string, client *http.Clien
 type authenticationProvider struct {
 	l sync.Mutex
 	// Whether this provider only supports token refresh or not.
-	refreshOnly bool
+	refreshOnly            bool
+	clientID, clientSecret string
 
 	httpClient   *http.Client
 	newToken     func(ctx context.Context) (*oauth2.Token, error)
@@ -109,8 +111,10 @@ func newCredentialsAuthProvider(
 	client = wrapTransportWithUserAgent(client, defaultUserAgent)
 
 	return &authenticationProvider{
-		refreshOnly: false,
-		httpClient:  client,
+		refreshOnly:  false,
+		clientID:     clientID,
+		clientSecret: clientSecret,
+		httpClient:   client,
 		newToken: func(ctx context.Context) (*oauth2.Token, error) {
 			return cfg.TokenSource(context.WithValue(ctx, oauth2.HTTPClient, client)).Token()
 		},
@@ -127,8 +131,10 @@ func newRefreshAuthProvider(
 	refresher := newRefresher(endpointURL, clientID, clientSecret, client)
 
 	return &authenticationProvider{
-		refreshOnly: true,
-		httpClient:  client,
+		refreshOnly:  true,
+		clientID:     clientID,
+		clientSecret: clientSecret,
+		httpClient:   client,
 		newToken: func(ctx context.Context) (*oauth2.Token, error) {
 			return refresher(ctx, refreshToken) // The first token is actually granted by a refresh
 		},
@@ -194,6 +200,50 @@ func (ap *authenticationProvider) injectHeader(ctx context.Context, req *http.Re
 	}
 
 	tk.SetAuthHeader(req)
+
+	return nil
+}
+
+func (ap *authenticationProvider) logout(ctx context.Context, endpoint string) error {
+	ap.l.Lock()
+	defer ap.l.Unlock()
+
+	if ap.token == nil || !ap.token.Valid() {
+		return nil // No need to perform a logout
+	}
+
+	clientSecret := ""
+	if ap.clientSecret != "" {
+		clientSecret = "&client_secret=" + ap.clientSecret
+	}
+
+	// Revoking the refresh token will also revoke the related access token
+	body := strings.NewReader(
+		fmt.Sprintf("client_id=%s%s&token_type_hint=refresh_token&token=%s",
+			ap.clientID, clientSecret, ap.token.RefreshToken,
+		),
+	)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint+"/o/revoke_token/", body)
+	if err != nil {
+		return fmt.Errorf("failed to parse logout request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := ap.httpClient.Do(req)
+	if err != nil {
+		// Multiple error verbs are only possible since Go1.20
+		return fmt.Errorf("%s: %w", ErrTokenRevoke.Error(), err)
+	}
+
+	defer cleanupResponse(resp)
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("%w: server replyed with status code %d", ErrTokenRevoke, resp.StatusCode)
+	}
+
+	ap.token = nil
 
 	return nil
 }
