@@ -199,27 +199,23 @@ func (c *Client) Do(
 	defer cleanupResponse(resp)
 
 	if resp.StatusCode >= 500 {
-		return resp.StatusCode, nil, &ServerError{
-			apiError: &apiError{
-				ReqPath:     reqURL.Path,
-				StatusCode:  resp.StatusCode,
-				ContentType: resp.Header.Get("Content-Type"),
-				Message:     resp.Status,
-				Response:    readBodyStart(resp.Body),
-			},
+		return resp.StatusCode, nil, &APIError{
+			ReqPath:     reqURL.Path,
+			StatusCode:  resp.StatusCode,
+			ContentType: resp.Header.Get("Content-Type"),
+			Message:     resp.Status,
+			Response:    readBodyStart(resp.Body),
 		}
 	}
 
 	if resp.StatusCode >= 400 {
 		bodyStart := readBodyStart(resp.Body)
-		clientErr := ClientError{
-			apiError: &apiError{
-				ReqPath:     reqURL.Path,
-				StatusCode:  resp.StatusCode,
-				ContentType: resp.Header.Get("Content-Type"),
-				Message:     resp.Status,
-				Response:    bodyStart,
-			},
+		apiErr := APIError{
+			ReqPath:     reqURL.Path,
+			StatusCode:  resp.StatusCode,
+			ContentType: resp.Header.Get("Content-Type"),
+			Message:     resp.Status,
+			Response:    bodyStart,
 		}
 
 		if resp.StatusCode == 401 {
@@ -235,7 +231,7 @@ func (c *Client) Do(
 
 			err = json.Unmarshal(bodyStart, &respBody)
 			if err != nil {
-				clientErr.Err = &JSONUnmarshalError{
+				apiErr.Err = &JSONUnmarshalError{
 					&jsonError{
 						Err:      err,
 						DataKind: JsonErrorDataKind_401Details,
@@ -244,21 +240,21 @@ func (c *Client) Do(
 				}
 			} else {
 				if len(respBody.Messages) > 0 {
-					clientErr.Message = respBody.Messages[0].Message
+					apiErr.Message = respBody.Messages[0].Message
 				} else {
-					clientErr.Message = respBody.Detail // probably less explicit than the above message
+					apiErr.Message = respBody.Detail // probably less explicit than the above message
 				}
 
 				return resp.StatusCode, nil, &AuthError{
-					ClientError: &clientErr,
-					ErrorCode:   respBody.Code,
+					APIError:  &apiErr,
+					ErrorCode: respBody.Code,
 				}
 			}
 		} else if resp.StatusCode == 404 {
-			clientErr.Err = fmt.Errorf("%w: %s", ErrResourceNotFound, reqURL.Path)
+			apiErr.Err = fmt.Errorf("%w: %s", ErrResourceNotFound, reqURL.Path)
 		}
 
-		return resp.StatusCode, nil, &clientErr
+		return resp.StatusCode, nil, &apiErr
 	}
 
 	respBuf := new(bytes.Buffer)
@@ -268,15 +264,13 @@ func (c *Client) Do(
 
 	_, err = respBuf.ReadFrom(resp.Body)
 	if err != nil {
-		return resp.StatusCode, nil, &ServerError{
-			apiError: &apiError{
-				ReqPath:     reqURL.Path,
-				StatusCode:  resp.StatusCode,
-				ContentType: resp.Header.Get("Content-Type"),
-				Message:     "can't read response body",
-				Err:         err,
-				Response:    nil,
-			},
+		return resp.StatusCode, nil, &APIError{
+			ReqPath:     reqURL.Path,
+			StatusCode:  resp.StatusCode,
+			ContentType: resp.Header.Get("Content-Type"),
+			Message:     "can't read response body",
+			Err:         err,
+			Response:    nil,
 		}
 	}
 

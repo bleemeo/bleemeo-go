@@ -261,15 +261,13 @@ func (ap *authenticationProvider) logout(ctx context.Context, endpoint string) e
 
 func buildAuthError(reqPath string, retErr *oauth2.RetrieveError) *AuthError {
 	return &AuthError{
-		ClientError: &ClientError{
-			apiError: &apiError{
-				ReqPath:     reqPath,
-				StatusCode:  retErr.Response.StatusCode,
-				ContentType: retErr.Response.Header.Get("Content-Type"),
-				Message:     retErr.ErrorDescription,
-				Err:         retErr,
-				Response:    retErr.Body,
-			},
+		APIError: &APIError{
+			ReqPath:     reqPath,
+			StatusCode:  retErr.Response.StatusCode,
+			ContentType: retErr.Response.Header.Get("Content-Type"),
+			Message:     retErr.ErrorDescription,
+			Err:         retErr,
+			Response:    retErr.Body,
 		},
 		ErrorCode: retErr.ErrorCode,
 	}

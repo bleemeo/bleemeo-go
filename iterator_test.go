@@ -198,16 +198,12 @@ func TestIterator(t *testing.T) {
 			t.Fatal("Expected error '400 - \"400 Bad Request\"'")
 		}
 
-		expectedError := &ClientError{
-			&apiError{
-				ReqPath:    "/v1/metric/",
-				StatusCode: 400,
-				Message:    "400 Bad Request",
-			},
+		expectedError := &APIError{
+			ReqPath:    "/v1/metric/",
+			StatusCode: 400,
+			Message:    "400 Bad Request",
 		}
-		cmpOpts := cmp.Options{cmp.AllowUnexported(ClientError{}), cmpopts.EquateEmpty()}
-
-		if diff := cmp.Diff(iter.Err(), expectedError, cmpOpts); diff != "" {
+		if diff := cmp.Diff(iter.Err(), expectedError, cmpopts.EquateEmpty()); diff != "" {
 			t.Fatalf("Unexpected error (-want +got):\n%s", diff)
 		}
 

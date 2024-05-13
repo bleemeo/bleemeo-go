@@ -336,23 +336,21 @@ func TestAuthentication(t *testing.T) {
 		}
 
 		expectedErr := &AuthError{
-			ClientError: &ClientError{
-				&apiError{
-					ReqPath:     "/v1/agent/<id>/",
-					StatusCode:  400,
-					ContentType: "",
-					Message:     "Invalid credentials given.",
-					Err: &oauth2.RetrieveError{
-						ErrorCode:        "invalid_grant",
-						ErrorDescription: "Invalid credentials given.",
-						Body:             respData,
-					},
-					Response: respData,
+			APIError: &APIError{
+				ReqPath:     "/v1/agent/<id>/",
+				StatusCode:  400,
+				ContentType: "",
+				Message:     "Invalid credentials given.",
+				Err: &oauth2.RetrieveError{
+					ErrorCode:        "invalid_grant",
+					ErrorDescription: "Invalid credentials given.",
+					Body:             respData,
 				},
+				Response: respData,
 			},
 			ErrorCode: "invalid_grant",
 		}
-		cmpOpts := cmp.Options{cmp.AllowUnexported(ClientError{}), cmpopts.IgnoreFields(oauth2.RetrieveError{}, "Response")}
+		cmpOpts := cmp.Options{cmpopts.IgnoreFields(oauth2.RetrieveError{}, "Response")}
 
 		if diff := cmp.Diff(unwrappErr.Unwrap(), expectedErr, cmpOpts); diff != "" {
 			t.Fatalf("Unexpected token (-want +got):\n%s", diff)
@@ -429,18 +427,16 @@ func TestAuthentication(t *testing.T) {
 			}
 
 			expectedErr := &AuthError{
-				ClientError: &ClientError{
-					&apiError{
-						ReqPath:     "/route",
-						StatusCode:  400,
-						ContentType: "application/json",
-						Message:     "error desc",
-						Err:         tokenRetErr,
-					},
+				APIError: &APIError{
+					ReqPath:     "/route",
+					StatusCode:  400,
+					ContentType: "application/json",
+					Message:     "error desc",
+					Err:         tokenRetErr,
 				},
 				ErrorCode: "error code",
 			}
-			if diff := cmp.Diff(err, expectedErr, cmp.AllowUnexported(ClientError{})); diff != "" {
+			if diff := cmp.Diff(err, expectedErr); diff != "" {
 				t.Fatalf("Unexpected error (-want +got):\n%s", diff)
 			}
 		})

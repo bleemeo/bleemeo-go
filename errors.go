@@ -55,7 +55,7 @@ func (kind JsonErrorDataKind) String() string {
 	}
 }
 
-type apiError struct {
+type APIError struct {
 	ReqPath     string
 	StatusCode  int
 	ContentType string
@@ -65,7 +65,7 @@ type apiError struct {
 	Response []byte
 }
 
-func (apiErr *apiError) Error() string {
+func (apiErr *APIError) Error() string {
 	var errStr string
 
 	if apiErr.StatusCode != 0 {
@@ -83,33 +83,13 @@ func (apiErr *apiError) Error() string {
 	return errStr
 }
 
-func (apiErr *apiError) Unwrap() error {
+func (apiErr *APIError) Unwrap() error {
 	return apiErr.Err
-}
-
-// A ClientError holds an error due to improper use of the API,
-// resulting in a status code in the 4xx range.
-type ClientError struct {
-	*apiError
-}
-
-func (clientErr *ClientError) Unwrap() error {
-	return clientErr.apiError
-}
-
-// A ServerError holds an error that occurred on the server-side,
-// resulting in a status code in the 5xx range.
-type ServerError struct {
-	*apiError
-}
-
-func (serverErr *ServerError) Unwrap() error {
-	return serverErr.apiError
 }
 
 // An AuthError holds an error due to unspecified or invalid credentials.
 type AuthError struct {
-	*ClientError
+	*APIError
 	// ErrorCode is RFC 6749's 'error' parameter.
 	ErrorCode string
 }
@@ -119,7 +99,7 @@ func (authErr *AuthError) Error() string {
 }
 
 func (authErr *AuthError) Unwrap() error {
-	return authErr.ClientError
+	return authErr.APIError
 }
 
 type jsonError struct {
