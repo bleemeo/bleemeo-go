@@ -6,6 +6,15 @@
 
 - Go1.18 or later
 
+### Environment
+
+At least the following options should be configured (as environment variables or with options):
+
+- OAuth client ID
+- Credentials OR initial refresh token
+
+> Ways to provide those options are referenced in the [Configuration](#configuration) section.
+
 ## Basic usage
 
 Retrieving a metric by ID, expecting the model's default fields.
@@ -55,3 +64,16 @@ func main() {
 ```
 
 > More examples can be found in [examples](./examples)
+
+## Configuration
+
+**For environment variables to be taken into account, the option `WithConfigurationFromEnv()` must be provided.**
+
+| Property               | Option function                       | Env variable(s)                                           |
+|------------------------|---------------------------------------|-----------------------------------------------------------|
+| Credentials            | `WithCredentials(username, password)` | `BLEEMEO_USER` & `BLEEMEO_PASSWORD`                       |
+| Endpoint URL           | `WithEndpoint(endpoint)`              | `BLEEMEO_API_URL`                                         |
+| OAuth client ID/secret | `WithOAuthClient(id, secret)`         | `BLEEMEO_OAUTH_CLIENT_ID` & `BLEEMEO_OAUTH_CLIENT_SECRET` |
+| Bleemeo account header | `WithBleemeoAccountHeader(accountID)` | `BLEEMEO_ACCOUNT_ID`                                      |
+| Initial refresh token  | `WithInitialOAuthRefreshToken(token)` | `BLEEMEO_OAUTH_INITIAL_REFRESH_TOKEN`                     |
+| HTTP client            | `WithHTTPClient(client)`              | -                                                         |

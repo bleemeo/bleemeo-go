@@ -55,6 +55,14 @@ func WithBleemeoAccountHeader(accountID string) ClientOption {
 	}
 }
 
+// WithInitialOAuthRefreshToken will make the client use the given refresh token
+// for authenticating against the API, instead of regular user/password credentials.
+func WithInitialOAuthRefreshToken(refreshToken string) ClientOption {
+	return func(c *Client) {
+		c.oAuthInitialRefresh = refreshToken
+	}
+}
+
 // WithConfigurationFromEnv will make the client retrieve and use configuration options
 // defined in environment variables, such as
 //
@@ -65,6 +73,8 @@ func WithBleemeoAccountHeader(accountID string) ClientOption {
 // - OAuth client ID/secret: "BLEEMEO_OAUTH_CLIENT_ID" & "BLEEMEO_OAUTH_CLIENT_SECRET"
 //
 // - Bleemeo account ID: "BLEEMEO_ACCOUNT_ID"
+//
+// - Initial refresh token: "BLEEMEO_OAUTH_INITIAL_REFRESH_TOKEN"
 func WithConfigurationFromEnv() ClientOption {
 	return func(c *Client) {
 		if username, set := os.LookupEnv("BLEEMEO_USER"); set {
@@ -90,14 +100,10 @@ func WithConfigurationFromEnv() ClientOption {
 		if accountID, set := os.LookupEnv("BLEEMEO_ACCOUNT_ID"); set {
 			c.headers["X-Bleemeo-Account"] = accountID
 		}
-	}
-}
 
-// WithInitialOAuthRefreshToken will make the client use the given refresh token
-// for authenticating against the API, instead of regular user/password credentials.
-func WithInitialOAuthRefreshToken(refreshToken string) ClientOption {
-	return func(c *Client) {
-		c.oAuthInitialRefresh = refreshToken
+		if refreshToken, set := os.LookupEnv("BLEEMEO_OAUTH_INITIAL_REFRESH_TOKEN"); set {
+			c.oAuthInitialRefresh = refreshToken
+		}
 	}
 }
 
