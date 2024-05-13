@@ -27,7 +27,12 @@ func main() {
 
 	pageNumber, pageSize := 1, 1
 
-	resultPage, err := client.GetPage(context.Background(), bleemeo.ResourceWidget, pageNumber, pageSize, bleemeo.Params{"title": "My widget", "fields": "id,dashboard"})
+	resultPage, err := client.GetPage(
+		context.Background(),
+		bleemeo.ResourceWidget,
+		pageNumber, pageSize,
+		bleemeo.Params{"title": "My widget", "fields": "id,dashboard"},
+	)
 	if err != nil {
 		log.Fatalln("Failed to fetch widget:", err)
 	}
@@ -48,7 +53,12 @@ func main() {
 		log.Fatalln("Error unmarshalling widget:", err)
 	}
 
-	widget, err := client.Update(context.Background(), bleemeo.ResourceWidget, widgetObj.ID, bleemeo.Body{"title": "This is my widget"})
+	widget, err := client.Update(
+		context.Background(),
+		bleemeo.ResourceWidget,
+		widgetObj.ID,
+		bleemeo.Body{"title": "This is my widget"},
+	)
 	if err != nil {
 		log.Fatalln("Failed to update widget:", err)
 	}

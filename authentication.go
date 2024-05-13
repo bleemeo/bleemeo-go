@@ -92,7 +92,9 @@ type authenticationProvider struct {
 
 // newCredentialsAuthProvider makes a new token source based on the given credentials.
 // New tokens will be fetched with the "password" grant type.
-func newCredentialsAuthProvider(endpointURL, username, password, clientID, clientSecret string, client *http.Client) *authenticationProvider {
+func newCredentialsAuthProvider(
+	endpointURL, username, password, clientID, clientSecret string, client *http.Client,
+) *authenticationProvider {
 	cfg := clientcredentials.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
@@ -118,7 +120,9 @@ func newCredentialsAuthProvider(endpointURL, username, password, clientID, clien
 
 // newRefreshAuthProvider makes a new token source based on the given refresh token.
 // New tokens will be fetched with the "refresh_token" grant type.
-func newRefreshAuthProvider(endpointURL, clientID, clientSecret, refreshToken string, client *http.Client) *authenticationProvider {
+func newRefreshAuthProvider(
+	endpointURL, clientID, clientSecret, refreshToken string, client *http.Client,
+) *authenticationProvider {
 	client = wrapTransportWithUserAgent(client, defaultUserAgent)
 	refresher := newRefresher(endpointURL, clientID, clientSecret, client)
 
@@ -132,7 +136,7 @@ func newRefreshAuthProvider(endpointURL, clientID, clientSecret, refreshToken st
 	}
 }
 
-func (ap *authenticationProvider) Token() (*oauth2.Token, error) {
+func (ap *authenticationProvider) Token(ctx context.Context) (*oauth2.Token, error) {
 	ap.l.Lock()
 	defer ap.l.Unlock()
 
@@ -140,16 +144,16 @@ func (ap *authenticationProvider) Token() (*oauth2.Token, error) {
 
 	switch {
 	case ap.token == nil:
-		ap.token, err = ap.newToken(context.Background())
+		ap.token, err = ap.newToken(ctx)
 	case !ap.token.Valid():
 		if ap.token.RefreshToken == "" {
 			return nil, ErrTokenHasNoRefresh
 		}
 
-		ap.token, err = ap.refreshToken(context.Background(), ap.token.RefreshToken)
+		ap.token, err = ap.refreshToken(ctx, ap.token.RefreshToken)
 		if err != nil {
 			if !ap.refreshOnly {
-				ap.token, err = ap.newToken(context.Background())
+				ap.token, err = ap.newToken(ctx)
 			}
 		}
 	}
@@ -179,8 +183,8 @@ func (ap *authenticationProvider) refetchToken(ctx context.Context) error {
 	return nil
 }
 
-func (ap *authenticationProvider) injectHeader(req *http.Request) error {
-	tk, err := ap.Token()
+func (ap *authenticationProvider) injectHeader(ctx context.Context, req *http.Request) error {
+	tk, err := ap.Token(ctx)
 	if err != nil {
 		if retErr := new(oauth2.RetrieveError); errors.As(err, &retErr) {
 			return buildAuthError(req.URL.Path, retErr)

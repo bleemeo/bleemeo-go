@@ -27,7 +27,14 @@ func main() {
 		}
 	}()
 
-	metricPage, err := client.GetPage(context.Background(), bleemeo.ResourceMetric, 1, 1, bleemeo.Params{"fields": "id,label", "active": "True"})
+	pageNumber, pageSize := 1, 1
+
+	metricPage, err := client.GetPage(
+		context.Background(),
+		bleemeo.ResourceMetric,
+		pageNumber, pageSize,
+		bleemeo.Params{"fields": "id,label", "active": "True"},
+	)
 	if err != nil {
 		log.Fatalln("Failed to fetch metric page:", err)
 	}

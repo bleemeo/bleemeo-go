@@ -2,6 +2,10 @@
 
 ### Go library for interacting with the Bleemeo API
 
+## Requirements
+
+- Go1.18 or later
+
 ## Basic usage
 
 Retrieving a metric by ID, expecting the model's default fields.
@@ -23,6 +27,13 @@ func main() {
 	if err != nil {
 		log.Fatalln("Failed to initialize client:", err)
 	}
+
+	defer func() {
+		err := client.Logout(context.Background())
+		if err != nil {
+			log.Fatalln("Logout:", err)
+		}
+	}()
 
 	metric, err := client.Get(context.Background(), bleemeo.Metric, "<the metric UUID>", bleemeo.DefaultFields)
 	if err != nil {

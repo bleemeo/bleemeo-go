@@ -43,7 +43,11 @@ func main() {
 	fmt.Println("Successfully created dashboard:", dashboardObj)
 	fmt.Println("View it on https://panel.bleemeo.com/dashboard/" + dashboardObj.ID)
 
-	widget, err := client.Create(context.Background(), bleemeo.ResourceWidget, bleemeo.Body{"dashboard": dashboardObj.ID, "title": "My widget", "graph": bleemeo.Graph_Text})
+	widget, err := client.Create(
+		context.Background(),
+		bleemeo.ResourceWidget,
+		bleemeo.Body{"dashboard": dashboardObj.ID, "title": "My widget", "graph": bleemeo.Graph_Text},
+	)
 	if err != nil {
 		log.Fatalln("Error creating widget:", err)
 	}

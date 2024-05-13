@@ -32,7 +32,9 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func makeClientMockForAuth(t *testing.T, authHandler, revokeHandler mockHandler, expectedAccessTk *string, extraOpts ...ClientOption) (c *Client, requestCounter map[string]int, err error) {
+func makeClientMockForAuth(
+	t *testing.T, authHandler, revokeHandler mockHandler, expectedAccessTk *string, extraOpts ...ClientOption,
+) (c *Client, requestCounter map[string]int, err error) {
 	t.Helper()
 
 	requestCounter = make(map[string]int)
@@ -133,7 +135,9 @@ func TestAuthentication(t *testing.T) {
 				t.Fatalf("Unexpected request body (-want +got):\n%s", diff)
 			}
 
-			return http.StatusOK, []byte(fmt.Sprintf(`{"access_token": "%s", "expires_in": %d, "token_type": "Bearer", "scope": "read write", "refresh_token": "%s"}`, accessToken, int(tokenValidity.Seconds()), refreshToken)), nil
+			return http.StatusOK, []byte(fmt.Sprintf(
+				`{"access_token": "%s", "expires_in": %d, "token_type": "Bearer", "scope": "read write", "refresh_token": "%s"}`,
+				accessToken, int(tokenValidity.Seconds()), refreshToken)), nil
 		}
 		revokeHandler := func(*http.Request) (statusCode int, body []byte, err error) {
 			revokeCallsCount++
@@ -142,12 +146,15 @@ func TestAuthentication(t *testing.T) {
 		}
 		expectedAccessToken := firstAccessTk
 
-		client, requestCounter, err := makeClientMockForAuth(t, authHandler, revokeHandler, &expectedAccessToken, WithCredentials(username, password), WithOAuthClient(clientID, clientSecret))
+		client, requestCounter, err := makeClientMockForAuth(
+			t, authHandler, revokeHandler, &expectedAccessToken,
+			WithCredentials(username, password), WithOAuthClient(clientID, clientSecret),
+		)
 		if err != nil {
 			t.Fatal("Failed to init client:", err)
 		}
 
-		token, err := client.authProvider.Token()
+		token, err := client.authProvider.Token(context.Background())
 		if err != nil {
 			t.Fatal("Failed to retrieve token:", err)
 		}
@@ -158,7 +165,9 @@ func TestAuthentication(t *testing.T) {
 			RefreshToken: firstRefreshTk,
 			Expiry:       time.Now().Add(tokenValidity),
 		}
-		if diff := cmp.Diff(token, expectedToken, cmpopts.IgnoreUnexported(oauth2.Token{}), cmpopts.EquateApproxTime(time.Minute)); diff != "" {
+		cmpOpts := cmp.Options{cmpopts.IgnoreUnexported(oauth2.Token{}), cmpopts.EquateApproxTime(time.Minute)}
+
+		if diff := cmp.Diff(token, expectedToken, cmpOpts); diff != "" {
 			t.Fatalf("Unexpected token (-want +got):\n%s", diff)
 		}
 
@@ -238,19 +247,24 @@ func TestAuthentication(t *testing.T) {
 				t.Fatalf("Unexpected request body (-want +got):\n%s", diff)
 			}
 
-			return http.StatusOK, []byte(fmt.Sprintf(`{"access_token": "%s", "expires_in": %d, "token_type": "Bearer", "scope": "read write", "refresh_token": "%s"}`, accessToken, int(tokenValidity.Seconds()), refreshToken)), nil
+			return http.StatusOK, []byte(fmt.Sprintf(
+				`{"access_token": "%s", "expires_in": %d, "token_type": "Bearer", "scope": "read write", "refresh_token": "%s"}`,
+				accessToken, int(tokenValidity.Seconds()), refreshToken)), nil
 		}
 		revokeHandler := func(*http.Request) (statusCode int, body []byte, err error) {
 			return http.StatusOK, nil, nil
 		}
 		expectedAccessToken := firstAccessTk
 
-		client, requestCounter, err := makeClientMockForAuth(t, authHandler, revokeHandler, &expectedAccessToken, WithInitialOAuthRefreshToken(initialRefresh), WithOAuthClient(clientID, clientSecret))
+		client, requestCounter, err := makeClientMockForAuth(
+			t, authHandler, revokeHandler, &expectedAccessToken,
+			WithInitialOAuthRefreshToken(initialRefresh), WithOAuthClient(clientID, clientSecret),
+		)
 		if err != nil {
 			t.Fatal("Failed to init client:", err)
 		}
 
-		token, err := client.authProvider.Token()
+		token, err := client.authProvider.Token(context.Background())
 		if err != nil {
 			t.Fatal("Failed to retrieve token:", err)
 		}
@@ -261,7 +275,9 @@ func TestAuthentication(t *testing.T) {
 			RefreshToken: firstRefreshTk,
 			Expiry:       time.Now().Add(tokenValidity),
 		}
-		if diff := cmp.Diff(token, expectedToken, cmpopts.IgnoreUnexported(oauth2.Token{}), cmpopts.EquateApproxTime(time.Minute)); diff != "" {
+		cmpOpts := cmp.Options{cmpopts.IgnoreUnexported(oauth2.Token{}), cmpopts.EquateApproxTime(time.Minute)}
+
+		if diff := cmp.Diff(token, expectedToken, cmpOpts); diff != "" {
 			t.Fatalf("Unexpected token (-want +got):\n%s", diff)
 		}
 
@@ -301,7 +317,10 @@ func TestAuthentication(t *testing.T) {
 			return http.StatusOK, nil, nil
 		}
 
-		client, requestCounter, err := makeClientMockForAuth(t, authHandler, revokeHandler, new(string), WithCredentials("bad", "creds"), WithOAuthClient("id", ""))
+		client, requestCounter, err := makeClientMockForAuth(
+			t, authHandler, revokeHandler, new(string),
+			WithCredentials("bad", "creds"), WithOAuthClient("id", ""),
+		)
 		if err != nil {
 			t.Fatal("Unexpected error:", err)
 		}
@@ -333,7 +352,9 @@ func TestAuthentication(t *testing.T) {
 			},
 			ErrorCode: "invalid_grant",
 		}
-		if diff := cmp.Diff(unwrappErr.Unwrap(), expectedErr, cmp.AllowUnexported(ClientError{}), cmpopts.IgnoreFields(oauth2.RetrieveError{}, "Response")); diff != "" {
+		cmpOpts := cmp.Options{cmp.AllowUnexported(ClientError{}), cmpopts.IgnoreFields(oauth2.RetrieveError{}, "Response")}
+
+		if diff := cmp.Diff(unwrappErr.Unwrap(), expectedErr, cmpOpts); diff != "" {
 			t.Fatalf("Unexpected token (-want +got):\n%s", diff)
 		}
 
@@ -362,12 +383,12 @@ func TestAuthentication(t *testing.T) {
 				},
 			}
 
-			req, err := http.NewRequest(http.MethodGet, "http://localhost/route", nil)
+			req, err := http.NewRequest(http.MethodGet, "http://localhost/route", nil) //nolint: noctx
 			if err != nil {
 				t.Fatal("Can't make request:", err)
 			}
 
-			err = ap.injectHeader(req)
+			err = ap.injectHeader(context.Background(), req)
 			if err != nil {
 				t.Fatal("Failed to inject auth header:", err)
 			}
@@ -387,7 +408,7 @@ func TestAuthentication(t *testing.T) {
 				ErrorCode:        "error code",
 				ErrorDescription: "error desc",
 				Response: &http.Response{
-					StatusCode: 400,
+					StatusCode: http.StatusBadRequest,
 					Header:     map[string][]string{"Content-Type": {"application/json"}},
 				},
 			}
@@ -397,12 +418,12 @@ func TestAuthentication(t *testing.T) {
 				},
 			}
 
-			req, err := http.NewRequest(http.MethodGet, "http://localhost/route", nil)
+			req, err := http.NewRequest(http.MethodGet, "http://localhost/route", nil) //nolint: noctx
 			if err != nil {
 				t.Fatal("Can't make request:", err)
 			}
 
-			err = ap.injectHeader(req)
+			err = ap.injectHeader(context.Background(), req)
 			if err == nil {
 				t.Fatal("Expected error, got none")
 			}

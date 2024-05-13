@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -34,6 +33,8 @@ const (
 	defaultUserAgent = "Bleemeo Go Client"
 )
 
+// Client is a helper to interact with the Bleemeo API,
+// providing methods to retrieve, list, create, update and delete resources.
 type Client struct {
 	username, password  string
 	endpoint            string
@@ -73,9 +74,11 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	c.epURL = epURL
 
 	if c.oAuthInitialRefresh != "" {
-		c.authProvider = newRefreshAuthProvider(c.endpoint, c.oAuthClientID, c.oAuthClientSecret, c.oAuthInitialRefresh, c.client)
+		c.authProvider =
+			newRefreshAuthProvider(c.endpoint, c.oAuthClientID, c.oAuthClientSecret, c.oAuthInitialRefresh, c.client)
 	} else {
-		c.authProvider = newCredentialsAuthProvider(c.endpoint, c.username, c.password, c.oAuthClientID, c.oAuthClientSecret, c.client)
+		c.authProvider =
+			newCredentialsAuthProvider(c.endpoint, c.username, c.password, c.oAuthClientID, c.oAuthClientSecret, c.client)
 	}
 
 	return c, nil
@@ -83,13 +86,17 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 
 // Logout revokes the OAuth token, preventing it from being reused.
 func (c *Client) Logout(ctx context.Context) error {
-	currentToken, err := c.authProvider.Token()
+	currentToken, err := c.authProvider.Token(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't retrieve token: %w", err)
 	}
 
 	// Revoking the refresh token will also revoke the related access token
-	body := strings.NewReader(fmt.Sprintf("client_id=%s&token_type_hint=refresh_token&token=%s", c.oAuthClientID, currentToken.RefreshToken))
+	body := strings.NewReader(
+		fmt.Sprintf("client_id=%s&token_type_hint=refresh_token&token=%s",
+			c.oAuthClientID, currentToken.RefreshToken,
+		),
+	)
 	// Temporarily modifying the content type to override application/json
 	previousContentType, hadContentType := c.headers["Content-Type"]
 	c.headers["Content-Type"] = "application/x-www-form-urlencoded"
@@ -123,8 +130,11 @@ func (c *Client) Get(ctx context.Context, resource Resource, id string, fields F
 }
 
 // GetPage returns a list of resources that match given params at the given page, with the given page size.
-// To collect all resources matching params (i.e., instead of querying all pages), prefer using Iterator() which is faster.
-func (c *Client) GetPage(ctx context.Context, resource Resource, page, pageSize int, params Params) (ResultsPage, error) {
+// To collect all resources matching params (i.e., instead of querying all pages),
+// prefer using Iterator() which is faster.
+func (c *Client) GetPage(
+	ctx context.Context, resource Resource, page, pageSize int, params Params,
+) (ResultsPage, error) {
 	params = cloneMap(params) // avoid mutation of given params
 	params["page"] = strconv.Itoa(page)
 	params["page_size"] = strconv.Itoa(pageSize)
@@ -138,7 +148,7 @@ func (c *Client) GetPage(ctx context.Context, resource Resource, page, pageSize 
 
 	err = json.Unmarshal(resp, &resultPage)
 	if err != nil {
-		return ResultsPage{}, &JsonUnmarshalError{
+		return ResultsPage{}, &JSONUnmarshalError{
 			jsonError: jsonError{
 				Err:      err,
 				DataKind: JsonErrorDataKind_ResultPage,
@@ -185,7 +195,9 @@ func (c *Client) Delete(ctx context.Context, resource Resource, id string) error
 
 // Do builds and execute the request according to the given parameters.
 // It returns the response status code and body content, or any error that occurred.
-func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, authenticated bool, body io.Reader) (int, []byte, error) {
+func (c *Client) Do(
+	ctx context.Context, method, reqURI string, params Params, authenticated bool, body io.Reader,
+) (int, []byte, error) {
 	reqURL, err := c.epURL.Parse(reqURI)
 	if err != nil {
 		return 0, nil, fmt.Errorf("bad request URI: %w", err)
@@ -207,12 +219,12 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 	if resp.StatusCode == 401 {
 		cleanupResponse(resp)
 
-		err = c.authProvider.refetchToken()
+		err = c.authProvider.refetchToken(ctx)
 		if err != nil {
 			return 0, nil, fmt.Errorf("failed to refetch token: %w", err)
 		}
 
-		resp, err = c.do(ctx, method, reqURL.String(), authenticated, body)
+		resp, err = c.do(ctx, method, reqURL.String(), authenticated, body) //nolint:bodyclose
 		if err != nil {
 			return 0, nil, fmt.Errorf("request execution retry failed: %w", err)
 		}
@@ -257,7 +269,7 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 
 			err = json.Unmarshal(bodyStart, &respBody)
 			if err != nil {
-				clientErr.Err = &JsonUnmarshalError{
+				clientErr.Err = &JSONUnmarshalError{
 					jsonError{
 						Err:      err,
 						DataKind: JsonErrorDataKind_401Details,
@@ -305,10 +317,12 @@ func (c *Client) Do(ctx context.Context, method, reqURI string, params Params, a
 	return resp.StatusCode, respBuf.Bytes(), nil
 }
 
-func (c *Client) do(ctx context.Context, method, reqURL string, authenticated bool, reqBody io.Reader) (*http.Response, error) {
+func (c *Client) do(
+	ctx context.Context, method, reqURL string, authenticated bool, reqBody io.Reader,
+) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, method, reqURL, reqBody)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse request: %w", err)
 	}
 
 	if reqBody != nil {
@@ -316,7 +330,7 @@ func (c *Client) do(ctx context.Context, method, reqURL string, authenticated bo
 	}
 
 	if authenticated {
-		err = c.authProvider.injectHeader(req)
+		err = c.authProvider.injectHeader(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -326,11 +340,9 @@ func (c *Client) do(ctx context.Context, method, reqURL string, authenticated bo
 		req.Header.Set(header, value)
 	}
 
-	log.Println("Executing request", reqURL)
-
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, err //nolint:wrapcheck
 	}
 
 	return resp, nil

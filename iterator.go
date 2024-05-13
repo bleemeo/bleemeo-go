@@ -23,6 +23,9 @@ import (
 	"net/http"
 )
 
+// An Iterator allows browsing all the resources of a specific kind,
+// optionally matching specified parameters,
+// and automatically fetching the next page when needed.
 type Iterator interface {
 	// Next sets the iteration cursor on the next resource,
 	// fetching the next result page if necessary.
@@ -103,7 +106,7 @@ func (iter *iterator) fetchPage(ctx context.Context) (ok bool) {
 
 	err = json.Unmarshal(resp, &page)
 	if err != nil {
-		iter.err = &JsonUnmarshalError{
+		iter.err = &JSONUnmarshalError{
 			jsonError: jsonError{
 				Err:      err,
 				DataKind: JsonErrorDataKind_ResultPage,

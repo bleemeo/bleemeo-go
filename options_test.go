@@ -31,12 +31,13 @@ import (
 
 const oauthMockResponse = `HTTP/1.1 200 OK
 
-{"access_token": "access", "expires_in": 36000, "token_type": "Bearer", "scope": "read write", "refresh_token": "refresh"}`
+{"access_token": "access", "expires_in": 36000, "token_type":` +
+	` "Bearer", "scope": "read write", "refresh_token": "refresh"}`
 
 type oauthMockTransport struct{}
 
 func (omt oauthMockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	return http.ReadResponse(bufio.NewReader(strings.NewReader(oauthMockResponse)), req)
+	return http.ReadResponse(bufio.NewReader(strings.NewReader(oauthMockResponse)), req) //nolint:wrapcheck
 }
 
 func mustParseURL(t *testing.T, s string) *url.URL {
@@ -111,8 +112,10 @@ func TestOptions(t *testing.T) {
 				endpoint:      defaultEndpoint,
 				oAuthClientID: "id",
 				client:        oauthMockClient,
-				headers:       map[string]string{"User-Agent": defaultUserAgent, "X-Bleemeo-Account": "eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3"},
-				epURL:         defaultEndpointURL,
+				headers: map[string]string{"User-Agent": defaultUserAgent,
+					"X-Bleemeo-Account": "eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3",
+				},
+				epURL: defaultEndpointURL,
 			},
 		},
 		{
@@ -133,8 +136,10 @@ func TestOptions(t *testing.T) {
 				oAuthClientID:     "123456789",
 				oAuthClientSecret: "53CR37",
 				client:            oauthMockClient,
-				headers:           map[string]string{"User-Agent": defaultUserAgent, "X-Bleemeo-Account": "eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3"},
-				epURL:             mustParseURL(t, "http://my-proxy.internal"),
+				headers: map[string]string{"User-Agent": defaultUserAgent,
+					"X-Bleemeo-Account": "eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3",
+				},
+				epURL: mustParseURL(t, "http://my-proxy.internal"),
 			},
 		},
 		{

@@ -22,7 +22,7 @@ import (
 
 // DefaultFields will make the API to return the model's basic fields.
 // Default fields vary from one model to another.
-var DefaultFields Fields = nil
+var DefaultFields Fields = nil //nolint:gochecknoglobals, revive
 
 type (
 	// Fields represents the list of fields to retrieve for a given model.
@@ -42,6 +42,7 @@ type (
 
 	// A ResultsPage represents a section of a resource listing.
 	ResultsPage struct {
+		// The total number of the requested resource available on the API.
 		Count    int               `json:"count"`
 		Next     string            `json:"next"`
 		Previous string            `json:"previous"`

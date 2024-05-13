@@ -30,6 +30,8 @@ func TestJsonReaderFrom(t *testing.T) {
 	t.Parallel()
 
 	t.Run("valid JSON", func(t *testing.T) {
+		t.Parallel()
+
 		reader, err := jsonReaderFrom(Body{"p1": "v1", "p2": 6.3})
 		if err != nil {
 			t.Fatal("Failed to make reader:", err)
@@ -47,6 +49,8 @@ func TestJsonReaderFrom(t *testing.T) {
 	})
 
 	t.Run("invalid JSON", func(t *testing.T) {
+		t.Parallel()
+
 		data := Body{"f": func() {}} // unlikely but invalid data
 
 		_, err := jsonReaderFrom(data)
@@ -54,14 +58,20 @@ func TestJsonReaderFrom(t *testing.T) {
 			t.Fatal("Expected error, got none")
 		}
 
-		expectedErr := &JsonMarshalError{
+		expectedErr := &JSONMarshalError{
 			jsonError{
 				Err:      &json.UnsupportedTypeError{},
 				DataKind: JsonErrorDataKind_RequestBody,
 				Data:     data,
 			},
 		}
-		if diff := cmp.Diff(err, expectedErr, cmp.AllowUnexported(JsonMarshalError{}), cmpopts.IgnoreInterfaces(struct{ reflect.Type }{}), cmpopts.IgnoreTypes(data["f"])); diff != "" {
+		cmpOpts := cmp.Options{
+			cmp.AllowUnexported(JSONMarshalError{}),
+			cmpopts.IgnoreInterfaces(struct{ reflect.Type }{}),
+			cmpopts.IgnoreTypes(func() {}),
+		}
+
+		if diff := cmp.Diff(err, expectedErr, cmpOpts); diff != "" {
 			t.Fatalf("Unexpected error (-want +got):\n%s", diff)
 		}
 	})

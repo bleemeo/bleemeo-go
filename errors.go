@@ -107,7 +107,7 @@ type AuthError struct {
 }
 
 func (authErr *AuthError) Error() string {
-	return fmt.Sprintf("authentication error: %s", authErr.Err.Error())
+	return "authentication error: " + authErr.Err.Error()
 }
 
 type jsonError struct {
@@ -124,18 +124,18 @@ func (jsonErr *jsonError) Unwrap() error {
 	return jsonErr.Err
 }
 
-type JsonMarshalError struct {
+type JSONMarshalError struct {
 	jsonError
 }
 
-func (jme *JsonMarshalError) Error() string {
+func (jme *JSONMarshalError) Error() string {
 	return "marshalling " + jme.jsonError.Error()
 }
 
-type JsonUnmarshalError struct {
+type JSONUnmarshalError struct {
 	jsonError
 }
 
-func (jme *JsonUnmarshalError) Error() string {
+func (jme *JSONUnmarshalError) Error() string {
 	return "unmarshalling " + jme.jsonError.Error()
 }

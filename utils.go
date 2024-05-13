@@ -33,7 +33,7 @@ func jsonReaderFrom(body Body) (io.Reader, error) {
 
 	data, err := json.Marshal(body)
 	if err != nil {
-		return nil, &JsonMarshalError{
+		return nil, &JSONMarshalError{
 			jsonError: jsonError{
 				DataKind: JsonErrorDataKind_RequestBody,
 				Data:     body,
@@ -61,7 +61,7 @@ func unmarshalResponse(_ int, respBody []byte, err error) (json.RawMessage, erro
 
 	err = json.Unmarshal(respBody, &raw)
 	if err != nil {
-		return nil, &JsonUnmarshalError{
+		return nil, &JSONUnmarshalError{
 			jsonError: jsonError{
 				Err:      err,
 				DataKind: JsonErrorDataKind_RequestBody,
@@ -95,9 +95,7 @@ func cloneMap[K comparable, V any](m map[K]V) map[K]V {
 // readBodyStart reads the first errorRespMaxLength of the response body.
 func readBodyStart(body io.Reader) []byte {
 	content, err := io.ReadAll(io.LimitReader(body, errorRespMaxLength))
-	if err == io.EOF {
-		err = nil
-	} else if err != nil {
+	if err != nil {
 		log.Println("Error reading body:", err)
 	}
 

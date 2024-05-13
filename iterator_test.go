@@ -29,7 +29,10 @@ import (
 )
 
 func authMockHandler(*http.Request) (int, []byte, error) {
-	return http.StatusOK, []byte(`{"access_token": "access", "expires_in": 36000, "token_type": "Bearer", "scope": "read write", "refresh_token": "refresh"}`), nil
+	return http.StatusOK, []byte(
+		`{"access_token": "access", "expires_in": 36000, "token_type":` +
+			` "Bearer", "scope": "read write", "refresh_token": "refresh"}`,
+	), nil
 }
 
 func makeMetricMockHandler(availablePages, pageSize int) mockHandler {
@@ -66,14 +69,16 @@ func makeMetricMockHandler(availablePages, pageSize int) mockHandler {
 
 		data, err := json.Marshal(result)
 		if err != nil {
-			return http.StatusInternalServerError, nil, err
+			return http.StatusInternalServerError, nil, err //nolint:wrapcheck
 		}
 
 		return http.StatusOK, data, nil
 	}
 }
 
-func makeClientMockForIteration(t *testing.T, metricHandler mockHandler, extraOpts ...ClientOption) (c *Client, requestCounter map[string]int) {
+func makeClientMockForIteration(
+	t *testing.T, metricHandler mockHandler, extraOpts ...ClientOption,
+) (c *Client, requestCounter map[string]int) {
 	t.Helper()
 
 	requestCounter = make(map[string]int)
@@ -87,7 +92,9 @@ func makeClientMockForIteration(t *testing.T, metricHandler mockHandler, extraOp
 		},
 	}
 
-	client, err := NewClient(append([]ClientOption{WithOAuthClient("id", ""), WithHTTPClient(clientMock)}, extraOpts...)...)
+	client, err := NewClient(
+		append([]ClientOption{WithOAuthClient("id", ""), WithHTTPClient(clientMock)}, extraOpts...)...,
+	)
 	if err != nil {
 		t.Fatal("Failed to init client:", err)
 	}
@@ -144,7 +151,10 @@ func TestIterator(t *testing.T) {
 	t.Run("empty iteration", func(t *testing.T) {
 		t.Parallel()
 
-		client, requestCounter := makeClientMockForIteration(t, makeMetricMockHandler(0, 10), WithInitialOAuthRefreshToken("refresh"))
+		client, requestCounter := makeClientMockForIteration(
+			t, makeMetricMockHandler(0, 10),
+			WithInitialOAuthRefreshToken("refresh"),
+		)
 		iter := client.Iterator(ResourceMetric, Params{})
 		objectsCount := 0
 
@@ -195,7 +205,9 @@ func TestIterator(t *testing.T) {
 				Message:    "400 Bad Request",
 			},
 		}
-		if diff := cmp.Diff(iter.Err(), expectedError, cmp.AllowUnexported(ClientError{}), cmpopts.EquateEmpty()); diff != "" {
+		cmpOpts := cmp.Options{cmp.AllowUnexported(ClientError{}), cmpopts.EquateEmpty()}
+
+		if diff := cmp.Diff(iter.Err(), expectedError, cmpOpts); diff != "" {
 			t.Fatalf("Unexpected error (-want +got):\n%s", diff)
 		}
 
@@ -215,10 +227,9 @@ func TestIterator(t *testing.T) {
 	t.Run("invalid iteration page", func(t *testing.T) {
 		t.Parallel()
 
-		var invalidJsonPage = []byte(`{"invalid": "page"`)
-
+		invalidJSONPage := []byte(`{"invalid": "page"`)
 		handler := func(*http.Request) (statusCode int, body []byte, err error) {
-			return http.StatusOK, invalidJsonPage, nil
+			return http.StatusOK, invalidJSONPage, nil
 		}
 
 		client, requestCounter := makeClientMockForIteration(t, handler)
@@ -233,14 +244,17 @@ func TestIterator(t *testing.T) {
 			t.Fatal("Expected error '400 - \"400 Bad Request\"'")
 		}
 
-		expectedError := &JsonUnmarshalError{
+		expectedError := &JSONUnmarshalError{
 			jsonError: jsonError{
-				Err:      json.Unmarshal(invalidJsonPage, new(json.RawMessage)), // reproducing the expected error, since we can't build it ourselves
+				// Reproducing the expected error, since we can't build it ourselves
+				Err:      json.Unmarshal(invalidJSONPage, new(json.RawMessage)),
 				DataKind: JsonErrorDataKind_ResultPage,
-				Data:     invalidJsonPage,
+				Data:     invalidJSONPage,
 			},
 		}
-		if diff := cmp.Diff(iter.Err(), expectedError, cmp.AllowUnexported(JsonUnmarshalError{}, json.SyntaxError{}), cmpopts.EquateEmpty()); diff != "" {
+		cmpOpts := cmp.Options{cmp.AllowUnexported(JSONUnmarshalError{}, json.SyntaxError{}), cmpopts.EquateEmpty()}
+
+		if diff := cmp.Diff(iter.Err(), expectedError, cmpOpts); diff != "" {
 			t.Fatalf("Unexpected error (-want +got):\n%s", diff)
 		}
 
