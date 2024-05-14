@@ -183,7 +183,7 @@ func (c *Client) Do(
 		return 0, nil, fmt.Errorf("request execution failed: %w", err)
 	}
 
-	if resp.StatusCode == 401 {
+	if resp.StatusCode == 401 && authenticated {
 		cleanupResponse(resp)
 
 		err = c.authProvider.refetchToken(ctx)
@@ -219,56 +219,25 @@ func (c *Client) Do(
 			Response:    bodyStart,
 		}
 
-		if resp.StatusCode == 400 {
+		switch {
+		case resp.StatusCode == 400:
 			var respBody map[string][]string
-
-			err = json.Unmarshal(bodyStart, &respBody)
-			if err != nil {
-				return resp.StatusCode, nil, &JSONUnmarshalError{
-					&jsonError{
-						Err:      err,
-						DataKind: JsonErrorDataKind_400Details,
-						Data:     bodyStart,
-					},
-				}
-			}
-
-			apiErr.Message = "Bad request:" + makeBadRequestMessage(respBody)
-
-			return resp.StatusCode, nil, &apiErr
-		} else if resp.StatusCode == 401 {
-			var respBody struct {
-				Detail   string `json:"detail"`
-				Code     string `json:"code"`
-				Messages []struct {
-					TokenClass string `json:"token_class"`
-					TokenType  string `json:"token_type"`
-					Message    string `json:"message"`
-				} `json:"messages"`
-			}
 
 			err = json.Unmarshal(bodyStart, &respBody)
 			if err != nil {
 				apiErr.Err = &JSONUnmarshalError{
 					&jsonError{
 						Err:      err,
-						DataKind: JsonErrorDataKind_401Details,
+						DataKind: JsonErrorDataKind_400Details,
 						Data:     bodyStart,
 					},
 				}
 			} else {
-				if len(respBody.Messages) > 0 {
-					apiErr.Message = respBody.Messages[0].Message
-				} else {
-					apiErr.Message = respBody.Detail // probably less explicit than the above message
-				}
-
-				return resp.StatusCode, nil, &AuthError{
-					APIError:  &apiErr,
-					ErrorCode: respBody.Code,
-				}
+				apiErr.Message = "Bad request:" + makeBadRequestMessage(respBody)
 			}
-		} else if resp.StatusCode == 404 {
+		case resp.StatusCode == 401:
+			return resp.StatusCode, nil, buildAuthErrorFromBody(&apiErr, bodyStart)
+		case resp.StatusCode == 404:
 			apiErr.Err = fmt.Errorf("%w: %s", ErrResourceNotFound, reqURL.Path)
 		}
 

@@ -54,7 +54,7 @@ func (kind JsonErrorDataKind) String() string {
 	case JsonErrorDataKind_RequestBody:
 		return "request body"
 	default:
-		return fmt.Sprintf("unknown JsonErrorDataKind(%d)", kind)
+		return fmt.Sprintf("unknown JsonErrorDataKind %d", kind)
 	}
 }
 
@@ -100,7 +100,11 @@ type AuthError struct {
 }
 
 func (authErr *AuthError) Error() string {
-	return "authentication error: " + authErr.Err.Error()
+	if authErr.Err != nil {
+		return "authentication error: " + authErr.Err.Error()
+	}
+
+	return "authentication error: " + authErr.APIError.Error()
 }
 
 func (authErr *AuthError) Unwrap() error {

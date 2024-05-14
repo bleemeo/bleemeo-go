@@ -78,7 +78,7 @@ func makeMetricMockHandler(availablePages, pageSize int) mockHandler {
 
 func makeClientMockForIteration(
 	t *testing.T, metricHandler mockHandler, extraOpts ...ClientOption,
-) (c *Client, requestCounter map[string]int) {
+) (client *Client, requestCounter map[string]int) {
 	t.Helper()
 
 	requestCounter = make(map[string]int)
@@ -92,9 +92,7 @@ func makeClientMockForIteration(
 		},
 	}
 
-	client, err := NewClient(
-		append([]ClientOption{WithOAuthClient("id", ""), WithHTTPClient(clientMock)}, extraOpts...)...,
-	)
+	client, err := NewClient(append([]ClientOption{WithHTTPClient(clientMock)}, extraOpts...)...)
 	if err != nil {
 		t.Fatal("Failed to init client:", err)
 	}

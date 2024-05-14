@@ -18,6 +18,7 @@ package bleemeo
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -271,4 +272,50 @@ func buildAuthError(reqPath string, retErr *oauth2.RetrieveError) *AuthError {
 		},
 		ErrorCode: retErr.ErrorCode,
 	}
+}
+
+func buildAuthErrorFromBody(apiErr *APIError, respBody []byte) error {
+	authErr := AuthError{
+		APIError: apiErr,
+	}
+
+	var respData struct {
+		// OAuth response
+		Error            string `json:"error"`
+		ErrorDescription string `json:"error_description"`
+		// API response
+		Detail   string `json:"detail"`
+		Code     string `json:"code"`
+		Messages []struct {
+			TokenClass string `json:"token_class"`
+			TokenType  string `json:"token_type"`
+			Message    string `json:"message"`
+		} `json:"messages"`
+	}
+
+	if err := json.Unmarshal(respBody, &respData); err != nil {
+		authErr.Err = &JSONUnmarshalError{
+			&jsonError{
+				Err:      err,
+				DataKind: JsonErrorDataKind_401Details,
+				Data:     respBody,
+			},
+		}
+
+		return &authErr
+	}
+
+	switch {
+	case respData.Error != "":
+		authErr.ErrorCode = respData.Error
+		authErr.Message = respData.ErrorDescription
+	case len(respData.Messages) > 0:
+		authErr.Message = respData.Messages[0].Message
+	case respData.Detail != "":
+		authErr.Message = respData.Detail
+	default:
+		authErr.Message = string(respBody)
+	}
+
+	return &authErr
 }

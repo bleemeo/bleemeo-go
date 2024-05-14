@@ -318,8 +318,7 @@ func TestAuthentication(t *testing.T) {
 		}
 
 		client, requestCounter, err := makeClientMockForAuth(
-			t, authHandler, revokeHandler, new(string),
-			WithCredentials("bad", "creds"), WithOAuthClient("id", ""),
+			t, authHandler, revokeHandler, new(string), WithCredentials("bad", "creds"),
 		)
 		if err != nil {
 			t.Fatal("Unexpected error:", err)
