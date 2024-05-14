@@ -22,6 +22,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 )
 
 // jsonReaderFrom marshals the given content to JSON,
@@ -100,4 +101,15 @@ func readBodyStart(body io.Reader) []byte {
 	}
 
 	return content
+}
+
+// makeBadRequestMessage concatenates all the information contained in the given map.
+func makeBadRequestMessage(m map[string][]string) string {
+	final := ""
+
+	for field, errs := range m {
+		final += "\n- " + field + ": " + strings.Join(errs, " / ")
+	}
+
+	return final
 }

@@ -34,7 +34,8 @@ var (
 type JsonErrorDataKind int
 
 const (
-	JsonErrorDataKind_401Details JsonErrorDataKind = iota
+	JsonErrorDataKind_400Details JsonErrorDataKind = iota
+	JsonErrorDataKind_401Details
 	JsonErrorDataKind_404Details
 	JsonErrorDataKind_ResultPage
 	JsonErrorDataKind_RequestBody
@@ -42,6 +43,8 @@ const (
 
 func (kind JsonErrorDataKind) String() string {
 	switch kind {
+	case JsonErrorDataKind_400Details:
+		return "400 details"
 	case JsonErrorDataKind_401Details:
 		return "401 details"
 	case JsonErrorDataKind_404Details:
@@ -73,7 +76,7 @@ func (apiErr *APIError) Error() string {
 	}
 
 	if apiErr.Message != "" {
-		errStr += "\"" + apiErr.Message + "\""
+		errStr += apiErr.Message
 	}
 
 	if apiErr.Err != nil {

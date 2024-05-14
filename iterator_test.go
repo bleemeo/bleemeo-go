@@ -183,7 +183,7 @@ func TestIterator(t *testing.T) {
 		t.Parallel()
 
 		handler := func(*http.Request) (statusCode int, body []byte, err error) {
-			return http.StatusBadRequest, nil, nil
+			return http.StatusInternalServerError, nil, nil
 		}
 
 		client, requestCounter := makeClientMockForIteration(t, handler)
@@ -200,8 +200,8 @@ func TestIterator(t *testing.T) {
 
 		expectedError := &APIError{
 			ReqPath:    "/v1/metric/",
-			StatusCode: 400,
-			Message:    "400 Bad Request",
+			StatusCode: 500,
+			Message:    "500 Internal Server Error",
 		}
 		if diff := cmp.Diff(iter.Err(), expectedError, cmpopts.EquateEmpty()); diff != "" {
 			t.Fatalf("Unexpected error (-want +got):\n%s", diff)

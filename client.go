@@ -218,7 +218,24 @@ func (c *Client) Do(
 			Response:    bodyStart,
 		}
 
-		if resp.StatusCode == 401 {
+		if resp.StatusCode == 400 {
+			var respBody map[string][]string
+
+			err = json.Unmarshal(bodyStart, &respBody)
+			if err != nil {
+				return resp.StatusCode, nil, &JSONUnmarshalError{
+					&jsonError{
+						Err:      err,
+						DataKind: JsonErrorDataKind_400Details,
+						Data:     bodyStart,
+					},
+				}
+			}
+
+			apiErr.Message = "Bad request:" + makeBadRequestMessage(respBody)
+
+			return resp.StatusCode, nil, &apiErr
+		} else if resp.StatusCode == 401 {
 			var respBody struct {
 				Detail   string `json:"detail"`
 				Code     string `json:"code"`
