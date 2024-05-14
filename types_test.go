@@ -11,6 +11,11 @@ import (
 func TestMakeBodyFrom(t *testing.T) {
 	t.Parallel()
 
+	type jsonModel struct {
+		Key   string `json:"key"`
+		Value int    `json:"value"`
+	}
+
 	cases := []struct {
 		input          any
 		expectedOutput Body
@@ -27,6 +32,13 @@ func TestMakeBodyFrom(t *testing.T) {
 				F3 float64
 			}{F1: "field", F2: 7, F3: 3.14},
 			expectedOutput: Body{"F1": "field", "F2": 7, "F3": 3.14},
+		},
+		{
+			input: jsonModel{
+				Key:   "SYD",
+				Value: 714,
+			},
+			expectedOutput: Body{"key": "SYD", "value": 714},
 		},
 		{
 			input:       "invalid",

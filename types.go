@@ -56,6 +56,7 @@ type (
 
 // MakeBodyFrom converts the given value to a [Body].
 // The value must be a map or a struct.
+// Struct fields with json tags are supported.
 func MakeBodyFrom(v any) (Body, error) {
 	vKind := reflect.ValueOf(v).Kind()
 	if vKind != reflect.Map && vKind != reflect.Struct {
@@ -64,7 +65,14 @@ func MakeBodyFrom(v any) (Body, error) {
 
 	var body Body
 
-	err := mapstructure.Decode(v, &body)
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{Result: &body, TagName: "json"})
+	if err != nil {
+		// This error isn't due to the value given by the user;
+		// thus, it should never happen in production.
+		panic("could not create decoder: " + err.Error())
+	}
+
+	err = decoder.Decode(v)
 	if err != nil {
 		return body, fmt.Errorf("can't convert the given body: %w", err)
 	}
