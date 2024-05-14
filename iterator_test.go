@@ -267,4 +267,24 @@ func TestIterator(t *testing.T) {
 		}
 	})
 
+	t.Run("calling At() without Next()", func(t *testing.T) {
+		t.Parallel()
+
+		client, err := NewClient()
+		if err != nil {
+			t.Fatal("Failed to create client:", err)
+		}
+
+		defer func() {
+			if r := recover(); r != nil {
+				if r != "Iterator.At() called in bad conditions" {
+					t.Fatalf("Unexpected panic message: %v", r)
+				}
+			}
+		}()
+
+		client.Iterator(ResourceMetric, Params{}).At()
+
+		t.Fatal("Expected Iterator.At() to panic")
+	})
 }
