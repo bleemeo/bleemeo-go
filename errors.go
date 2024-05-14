@@ -58,6 +58,8 @@ func (kind JsonErrorDataKind) String() string {
 	}
 }
 
+// APIError represents an error returned by the Bleemeo API,
+// when the StatusCode is in the 4xx or 5xx range.
 type APIError struct {
 	ReqPath     string
 	StatusCode  int
@@ -119,6 +121,8 @@ func (jsonErr *jsonError) Unwrap() error {
 	return jsonErr.Err
 }
 
+// JSONMarshalError represents an error that occurred
+// during the serialization of data to JSON.
 type JSONMarshalError struct {
 	*jsonError
 }
@@ -127,6 +131,8 @@ func (jme *JSONMarshalError) Error() string {
 	return "marshalling " + jme.jsonError.Error()
 }
 
+// JSONUnmarshalError represents an error that occurred
+// during the deserialization of data from JSON.
 type JSONUnmarshalError struct {
 	*jsonError
 }

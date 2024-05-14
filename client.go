@@ -95,7 +95,8 @@ func (c *Client) Get(ctx context.Context, resource Resource, id string, fields F
 	return unmarshalResponse(c.Do(ctx, http.MethodGet, reqURI, params, true, nil))
 }
 
-// GetPage returns a list of resources that match given params at the given page, with the given page size.
+// GetPage returns a list of resources that match given params at the given page,
+// as pages of the given size.
 // To collect all resources matching params (i.e., instead of querying all pages),
 // prefer using Iterator() which is faster.
 func (c *Client) GetPage(
@@ -285,7 +286,7 @@ func (c *Client) Do(
 			ReqPath:     reqURL.Path,
 			StatusCode:  resp.StatusCode,
 			ContentType: resp.Header.Get("Content-Type"),
-			Message:     "can't read response body",
+			Message:     "failed to read response body",
 			Err:         err,
 			Response:    nil,
 		}
@@ -299,7 +300,7 @@ func (c *Client) do(
 ) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, method, reqURL, reqBody)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse request: %w", err)
+		return nil, fmt.Errorf("can't parse request: %w", err)
 	}
 
 	if reqBody != nil {

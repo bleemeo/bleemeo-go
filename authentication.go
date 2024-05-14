@@ -214,12 +214,12 @@ func (ap *authenticationProvider) logout(ctx context.Context, endpoint string) e
 
 	endpointURL, err := url.Parse(endpoint)
 	if err != nil {
-		return err
+		return fmt.Errorf("can't parse endpoint URL: %w", err)
 	}
 
 	reqURL, err := endpointURL.Parse("/o/revoke_token/")
 	if err != nil {
-		return err
+		return fmt.Errorf("can't parse logout URL: %w", err)
 	}
 
 	values := url.Values{
