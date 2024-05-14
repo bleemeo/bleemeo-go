@@ -287,9 +287,7 @@ func buildAuthErrorFromBody(apiErr *APIError, respBody []byte) error {
 		Detail   string `json:"detail"`
 		Code     string `json:"code"`
 		Messages []struct {
-			TokenClass string `json:"token_class"`
-			TokenType  string `json:"token_type"`
-			Message    string `json:"message"`
+			Message string `json:"message"`
 		} `json:"messages"`
 	}
 

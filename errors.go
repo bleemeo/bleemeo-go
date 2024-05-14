@@ -24,24 +24,30 @@ import (
 const errorRespMaxLength = 1 << 20 // 1MB
 
 var (
+	// ErrTokenIsRefreshOnly is returned when trying to request a new token from credentials.
 	ErrTokenIsRefreshOnly = errors.New("the OAuth token can only be refreshed")
-	ErrTokenHasNoRefresh  = errors.New("the OAuth token has no refresh")
-	ErrTokenRevoke        = errors.New("failed to revoke token")
-	ErrResourceNotFound   = errors.New("resource not found")
+	// ErrTokenHasNoRefresh is returned when the OAuth access token has no associated refresh token.
+	ErrTokenHasNoRefresh = errors.New("the OAuth token has no refresh")
+	// ErrTokenRevoke is returned when the logout operation has not been completed successfully.
+	ErrTokenRevoke = errors.New("failed to revoke token")
+	// ErrResourceNotFound is returned when the resource with the specified ID doesn't exist.
+	ErrResourceNotFound = errors.New("resource not found")
+	// ErrBodyNotMapOrStruct is returned when trying to convert to a [Body] a variable that is neither a map nor a struct.
 	ErrBodyNotMapOrStruct = errors.New("the body must be a map or a struct")
 )
 
-type JsonErrorDataKind int
+// JSONErrorDataKind indicates the type of data whose conversion failed.
+type JSONErrorDataKind int
 
 const (
-	JsonErrorDataKind_400Details JsonErrorDataKind = iota
+	JsonErrorDataKind_400Details JSONErrorDataKind = iota
 	JsonErrorDataKind_401Details
 	JsonErrorDataKind_404Details
 	JsonErrorDataKind_ResultPage
 	JsonErrorDataKind_RequestBody
 )
 
-func (kind JsonErrorDataKind) String() string {
+func (kind JSONErrorDataKind) String() string {
 	switch kind {
 	case JsonErrorDataKind_400Details:
 		return "400 details"
@@ -113,7 +119,7 @@ func (authErr *AuthError) Unwrap() error {
 
 type jsonError struct {
 	Err      error
-	DataKind JsonErrorDataKind
+	DataKind JSONErrorDataKind
 	Data     any
 }
 

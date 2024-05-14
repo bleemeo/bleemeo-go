@@ -72,11 +72,13 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	c.epURL = epURL
 
 	if c.oAuthInitialRefresh != "" {
-		c.authProvider =
-			newRefreshAuthProvider(c.endpoint, c.oAuthClientID, c.oAuthClientSecret, c.oAuthInitialRefresh, c.client)
+		c.authProvider = newRefreshAuthProvider(
+			c.endpoint, c.oAuthClientID, c.oAuthClientSecret, c.oAuthInitialRefresh, c.client,
+		)
 	} else {
-		c.authProvider =
-			newCredentialsAuthProvider(c.endpoint, c.username, c.password, c.oAuthClientID, c.oAuthClientSecret, c.client)
+		c.authProvider = newCredentialsAuthProvider(
+			c.endpoint, c.username, c.password, c.oAuthClientID, c.oAuthClientSecret, c.client,
+		)
 	}
 
 	return c, nil
@@ -220,7 +222,7 @@ func (c *Client) Do(
 		}
 
 		switch {
-		case resp.StatusCode == 400:
+		case resp.StatusCode == http.StatusBadRequest:
 			var respBody map[string][]string
 
 			err = json.Unmarshal(bodyStart, &respBody)
@@ -235,9 +237,9 @@ func (c *Client) Do(
 			} else {
 				apiErr.Message = "Bad request:" + makeBadRequestMessage(respBody)
 			}
-		case resp.StatusCode == 401:
+		case resp.StatusCode == http.StatusUnauthorized:
 			return resp.StatusCode, nil, buildAuthErrorFromBody(&apiErr, bodyStart)
-		case resp.StatusCode == 404:
+		case resp.StatusCode == http.StatusNotFound:
 			apiErr.Err = fmt.Errorf("%w: %s", ErrResourceNotFound, reqURL.Path)
 		}
 
