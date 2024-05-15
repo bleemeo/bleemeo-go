@@ -19,6 +19,8 @@ package bleemeo
 import (
 	"net/http"
 	"os"
+
+	"golang.org/x/oauth2"
 )
 
 // A ClientOption can be used to customize the [Client].
@@ -111,5 +113,13 @@ func WithConfigurationFromEnv() ClientOption {
 func WithHTTPClient(client *http.Client) ClientOption {
 	return func(c *Client) {
 		c.client = client
+	}
+}
+
+// WithNewOAuthTokenCallback defines the given function as the one to be called
+// when a new OAuth token is retrieved.
+func WithNewOAuthTokenCallback(callback func(token *oauth2.Token)) ClientOption {
+	return func(c *Client) {
+		c.newOAuthTokenCallback = callback
 	}
 }

@@ -87,6 +87,7 @@ type authenticationProvider struct {
 	// Whether this provider only supports token refresh or not.
 	refreshOnly            bool
 	clientID, clientSecret string
+	newOAuthTokenCallback  func(token *oauth2.Token)
 
 	httpClient   *http.Client
 	newToken     tokenProvider
@@ -170,6 +171,10 @@ func (ap *authenticationProvider) Token(ctx context.Context) (*oauth2.Token, err
 		}
 	}
 
+	if ap.newOAuthTokenCallback != nil {
+		ap.newOAuthTokenCallback(ap.token)
+	}
+
 	return ap.token, err
 }
 
@@ -191,6 +196,10 @@ func (ap *authenticationProvider) refetchToken(ctx context.Context) error {
 	}
 
 	ap.token = tk
+
+	if ap.newOAuthTokenCallback != nil {
+		ap.newOAuthTokenCallback(ap.token)
+	}
 
 	return nil
 }

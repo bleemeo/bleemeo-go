@@ -26,6 +26,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"golang.org/x/oauth2"
 )
 
 const (
@@ -37,13 +39,14 @@ const (
 // Client is a helper to interact with the Bleemeo API,
 // providing methods to retrieve, list, create, update and delete resources.
 type Client struct {
-	username, password  string
-	endpoint            string
-	oAuthClientID       string
-	oAuthClientSecret   string
-	oAuthInitialRefresh string
-	client              *http.Client
-	headers             map[string]string
+	username, password    string
+	endpoint              string
+	oAuthClientID         string
+	oAuthClientSecret     string
+	oAuthInitialRefresh   string
+	client                *http.Client
+	newOAuthTokenCallback func(token *oauth2.Token)
+	headers               map[string]string
 
 	epURL        *url.URL
 	authProvider *authenticationProvider
@@ -79,6 +82,10 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	c.authProvider = newAuthenticationProvider(
 		c.endpoint, c.username, c.password, c.oAuthInitialRefresh, c.oAuthClientID, c.oAuthClientSecret, c.client,
 	)
+
+	if c.newOAuthTokenCallback != nil {
+		c.authProvider.newOAuthTokenCallback = c.newOAuthTokenCallback
+	}
 
 	return c, nil
 }

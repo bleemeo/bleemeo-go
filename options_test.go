@@ -25,9 +25,11 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"unsafe"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"golang.org/x/oauth2"
 )
 
 const oauthMockResponse = `HTTP/1.1 200 OK
@@ -58,6 +60,7 @@ func TestOptions(t *testing.T) {
 	creds := WithCredentials("u", "")
 	oauthMockClient := &http.Client{Transport: oauthMockTransport{}}
 	defaultEndpointURL := mustParseURL(t, defaultEndpoint)
+	newOAuthTkCb := func(*oauth2.Token) {}
 
 	cases := []struct {
 		name           string
@@ -181,6 +184,19 @@ func TestOptions(t *testing.T) {
 				epURL: mustParseURL(t, "http://my-proxy.internal"),
 			},
 		},
+		{
+			name:    "with new oAuth token callback",
+			options: []ClientOption{WithNewOAuthTokenCallback(newOAuthTkCb), creds},
+			expectedClient: Client{
+				username:              "u",
+				endpoint:              defaultEndpoint,
+				oAuthClientID:         defaultOAuthClientID,
+				client:                oauthMockClient,
+				newOAuthTokenCallback: newOAuthTkCb,
+				headers:               map[string]string{"User-Agent": defaultUserAgent},
+				epURL:                 defaultEndpointURL,
+			},
+		},
 		// We can assume that WithHTTPClient() works since it is used in all the above cases.
 	}
 
@@ -206,8 +222,11 @@ func TestOptions(t *testing.T) {
 				return
 			}
 
-			cmpOpts := cmp.Options{cmp.AllowUnexported(Client{}), cmpopts.IgnoreFields(Client{}, "authProvider")}
-
+			cmpOpts := cmp.Options{
+				cmp.AllowUnexported(Client{}),
+				cmpopts.IgnoreFields(Client{}, "authProvider"),
+				cmp.Comparer(tokenCallbackComparer),
+			}
 			if diff := cmp.Diff(tc.expectedClient, *client, cmpOpts); diff != "" {
 				t.Fatalf("Unexpected client: (-want +got)\n%s", diff)
 			}
@@ -215,6 +234,13 @@ func TestOptions(t *testing.T) {
 	}
 }
 
-func errorComparer(a, b error) bool {
-	return a.Error() == b.Error()
+func errorComparer(x, y error) bool {
+	return x.Error() == y.Error()
+}
+
+func tokenCallbackComparer(x, y func(*oauth2.Token)) bool {
+	px := *(*unsafe.Pointer)(unsafe.Pointer(&x))
+	py := *(*unsafe.Pointer)(unsafe.Pointer(&y))
+
+	return px == py
 }
