@@ -135,6 +135,16 @@ func (c *Client) GetPage(
 	return resultPage, nil
 }
 
+// Count the number of resources of the given kind matching the given parameters.
+func (c *Client) Count(ctx context.Context, resource Resource, params Params) (int, error) {
+	result, err := c.GetPage(ctx, resource, 1, 0, params)
+	if err != nil {
+		return 0, err
+	}
+
+	return result.Count, nil
+}
+
 // Iterator returns all resources that match given params.
 func (c *Client) Iterator(resource Resource, params Params) Iterator {
 	return newIterator(c, resource, params)
