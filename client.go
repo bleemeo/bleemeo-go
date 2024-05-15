@@ -61,7 +61,9 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	}
 
 	for _, opt := range opts {
-		opt(c)
+		if opt != nil {
+			opt(c)
+		}
 	}
 
 	if c.username == "" && c.oAuthInitialRefresh == "" {
