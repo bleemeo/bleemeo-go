@@ -33,8 +33,6 @@ var (
 	ErrTokenRevoke = errors.New("failed to revoke token")
 	// ErrResourceNotFound is returned when the resource with the specified ID doesn't exist.
 	ErrResourceNotFound = errors.New("resource not found")
-	// ErrBodyNotMapOrStruct is returned when trying to convert to a [Body] a variable that is neither a map nor a struct.
-	ErrBodyNotMapOrStruct = errors.New("the body must be a map or a struct")
 )
 
 // JSONErrorDataKind indicates the type of data whose conversion failed.
