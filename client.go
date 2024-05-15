@@ -64,22 +64,19 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 		opt(c)
 	}
 
+	if c.username == "" && c.oAuthInitialRefresh == "" {
+		return nil, ErrNoAuthMeanProvided
+	}
+
 	epURL, err := url.Parse(c.endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("invalid endpoint URL: %w", err)
 	}
 
 	c.epURL = epURL
-
-	if c.oAuthInitialRefresh != "" {
-		c.authProvider = newRefreshAuthProvider(
-			c.endpoint, c.oAuthClientID, c.oAuthClientSecret, c.oAuthInitialRefresh, c.client,
-		)
-	} else {
-		c.authProvider = newCredentialsAuthProvider(
-			c.endpoint, c.username, c.password, c.oAuthClientID, c.oAuthClientSecret, c.client,
-		)
-	}
+	c.authProvider = newAuthenticationProvider(
+		c.endpoint, c.username, c.password, c.oAuthInitialRefresh, c.oAuthClientID, c.oAuthClientSecret, c.client,
+	)
 
 	return c, nil
 }

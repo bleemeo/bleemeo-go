@@ -32,6 +32,9 @@ import (
 
 const tokenPath = "/o/token/"
 
+type tokenProvider func(ctx context.Context) (*oauth2.Token, error)
+type tokenRefresher func(ctx context.Context, refreshToken string) (*oauth2.Token, error)
+
 type userAgentTransporter struct {
 	userAgentHeader string
 	http.RoundTripper
@@ -58,8 +61,6 @@ func wrapTransportWithUserAgent(client *http.Client, userAgentHeader string) *ht
 
 	return &c
 }
-
-type tokenRefresher func(ctx context.Context, refreshToken string) (*oauth2.Token, error)
 
 func newRefresher(endpointURL, clientID, clientSecret string, client *http.Client) tokenRefresher {
 	cfg := oauth2.Config{
@@ -88,16 +89,43 @@ type authenticationProvider struct {
 	clientID, clientSecret string
 
 	httpClient   *http.Client
-	newToken     func(ctx context.Context) (*oauth2.Token, error)
+	newToken     tokenProvider
 	refreshToken tokenRefresher
 	token        *oauth2.Token
 }
 
+func newAuthenticationProvider(
+	endpointURL, username, password, initialRefreshToken, clientID, clientSecret string, client *http.Client,
+) *authenticationProvider {
+	client = wrapTransportWithUserAgent(client, defaultUserAgent)
+	authProvider := authenticationProvider{
+		clientID:     clientID,
+		clientSecret: clientSecret,
+		httpClient:   client,
+		refreshToken: newRefresher(endpointURL, clientID, clientSecret, client),
+	}
+
+	if username != "" {
+		authProvider.refreshOnly = false
+		authProvider.newToken = credentialsTokenProvider(endpointURL, username, password, clientID, clientSecret, client)
+	} else {
+		authProvider.refreshOnly = true
+	}
+
+	if initialRefreshToken != "" {
+		authProvider.token = &oauth2.Token{
+			RefreshToken: initialRefreshToken,
+		}
+	}
+
+	return &authProvider
+}
+
 // newCredentialsAuthProvider makes a new token source based on the given credentials.
 // New tokens will be fetched with the "password" grant type.
-func newCredentialsAuthProvider(
+func credentialsTokenProvider(
 	endpointURL, username, password, clientID, clientSecret string, client *http.Client,
-) *authenticationProvider {
+) tokenProvider {
 	cfg := clientcredentials.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
@@ -111,35 +139,8 @@ func newCredentialsAuthProvider(
 	}
 	client = wrapTransportWithUserAgent(client, defaultUserAgent)
 
-	return &authenticationProvider{
-		refreshOnly:  false,
-		clientID:     clientID,
-		clientSecret: clientSecret,
-		httpClient:   client,
-		newToken: func(ctx context.Context) (*oauth2.Token, error) {
-			return cfg.TokenSource(context.WithValue(ctx, oauth2.HTTPClient, client)).Token()
-		},
-		refreshToken: newRefresher(endpointURL, clientID, clientSecret, client),
-	}
-}
-
-// newRefreshAuthProvider makes a new token source based on the given refresh token.
-// New tokens will be fetched with the "refresh_token" grant type.
-func newRefreshAuthProvider(
-	endpointURL, clientID, clientSecret, refreshToken string, client *http.Client,
-) *authenticationProvider {
-	client = wrapTransportWithUserAgent(client, defaultUserAgent)
-	refresher := newRefresher(endpointURL, clientID, clientSecret, client)
-
-	return &authenticationProvider{
-		refreshOnly:  true,
-		clientID:     clientID,
-		clientSecret: clientSecret,
-		httpClient:   client,
-		newToken: func(ctx context.Context) (*oauth2.Token, error) {
-			return refresher(ctx, refreshToken) // The first token is actually granted by a refresh
-		},
-		refreshToken: refresher,
+	return func(ctx context.Context) (*oauth2.Token, error) {
+		return cfg.TokenSource(context.WithValue(ctx, oauth2.HTTPClient, client)).Token()
 	}
 }
 
@@ -151,6 +152,10 @@ func (ap *authenticationProvider) Token(ctx context.Context) (*oauth2.Token, err
 
 	switch {
 	case ap.token == nil:
+		if ap.newToken == nil {
+			return nil, ErrNoAuthMeanProvided
+		}
+
 		ap.token, err = ap.newToken(ctx)
 	case !ap.token.Valid():
 		if ap.token.RefreshToken == "" {

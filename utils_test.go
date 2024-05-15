@@ -74,7 +74,7 @@ func TestJsonReaderFrom(t *testing.T) {
 			cmpopts.IgnoreTypes(func() {}),
 		}
 
-		if diff := cmp.Diff(err, expectedErr, cmpOpts); diff != "" {
+		if diff := cmp.Diff(expectedErr, err, cmpOpts); diff != "" {
 			t.Fatalf("Unexpected error (-want +got):\n%s", diff)
 		}
 	})

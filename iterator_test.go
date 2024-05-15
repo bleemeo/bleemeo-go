@@ -92,7 +92,10 @@ func makeClientMockForIteration(
 		},
 	}
 
-	client, err := NewClient(append([]ClientOption{WithHTTPClient(clientMock)}, extraOpts...)...)
+	client, err := NewClient(append([]ClientOption{
+		WithCredentials("u", ""),
+		WithHTTPClient(clientMock),
+	}, extraOpts...)...)
 	if err != nil {
 		t.Fatal("Failed to init client:", err)
 	}
@@ -141,7 +144,7 @@ func TestIterator(t *testing.T) {
 			tokenPath:     1,
 			"/v1/metric/": 3,
 		}
-		if diff := cmp.Diff(requestCounter, expectedRequests); diff != "" {
+		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
 			t.Fatalf("Unexpected requests (-want +got):\n%s", diff)
 		}
 	})
@@ -172,7 +175,7 @@ func TestIterator(t *testing.T) {
 			tokenPath:     1, // only one call, thanks to the initial refresh token
 			"/v1/metric/": 1,
 		}
-		if diff := cmp.Diff(requestCounter, expectedRequests); diff != "" {
+		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
 			t.Fatalf("Unexpected requests (-want +got):\n%s", diff)
 		}
 	})
@@ -201,7 +204,7 @@ func TestIterator(t *testing.T) {
 			StatusCode: 500,
 			Message:    "500 Internal Server Error",
 		}
-		if diff := cmp.Diff(iter.Err(), expectedError, cmpopts.EquateEmpty()); diff != "" {
+		if diff := cmp.Diff(expectedError, iter.Err(), cmpopts.EquateEmpty()); diff != "" {
 			t.Fatalf("Unexpected error (-want +got):\n%s", diff)
 		}
 
@@ -213,7 +216,7 @@ func TestIterator(t *testing.T) {
 			tokenPath:     1,
 			"/v1/metric/": 1,
 		}
-		if diff := cmp.Diff(requestCounter, expectedRequests); diff != "" {
+		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
 			t.Fatalf("Unexpected requests (-want +got):\n%s", diff)
 		}
 	})
@@ -248,7 +251,7 @@ func TestIterator(t *testing.T) {
 		}
 		cmpOpts := cmp.Options{cmp.AllowUnexported(JSONUnmarshalError{}, json.SyntaxError{}), cmpopts.EquateEmpty()}
 
-		if diff := cmp.Diff(iter.Err(), expectedError, cmpOpts); diff != "" {
+		if diff := cmp.Diff(expectedError, iter.Err(), cmpOpts); diff != "" {
 			t.Fatalf("Unexpected error (-want +got):\n%s", diff)
 		}
 
@@ -260,7 +263,7 @@ func TestIterator(t *testing.T) {
 			tokenPath:     1,
 			"/v1/metric/": 1,
 		}
-		if diff := cmp.Diff(requestCounter, expectedRequests); diff != "" {
+		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
 			t.Fatalf("Unexpected requests (-want +got):\n%s", diff)
 		}
 	})
@@ -268,7 +271,7 @@ func TestIterator(t *testing.T) {
 	t.Run("calling At() without Next()", func(t *testing.T) {
 		t.Parallel()
 
-		client, err := NewClient()
+		client, err := NewClient(WithInitialOAuthRefreshToken("r"))
 		if err != nil {
 			t.Fatal("Failed to create client:", err)
 		}

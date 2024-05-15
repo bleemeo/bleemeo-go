@@ -131,7 +131,7 @@ func TestAuthentication(t *testing.T) {
 				t.Fatalf("Unexpected grant type %v", reqBodyValues["grant_type"])
 			}
 
-			if diff := cmp.Diff(reqBodyValues, expectedReqBody); diff != "" {
+			if diff := cmp.Diff(expectedReqBody, reqBodyValues); diff != "" {
 				t.Fatalf("Unexpected request body (-want +got):\n%s", diff)
 			}
 
@@ -167,7 +167,7 @@ func TestAuthentication(t *testing.T) {
 		}
 		cmpOpts := cmp.Options{cmpopts.IgnoreUnexported(oauth2.Token{}), cmpopts.EquateApproxTime(time.Minute)}
 
-		if diff := cmp.Diff(token, expectedToken, cmpOpts); diff != "" {
+		if diff := cmp.Diff(expectedToken, token, cmpOpts); diff != "" {
 			t.Fatalf("Unexpected token (-want +got):\n%s", diff)
 		}
 
@@ -243,7 +243,7 @@ func TestAuthentication(t *testing.T) {
 				t.Fatalf("Unexpected grant type %v", reqBodyValues["grant_type"])
 			}
 
-			if diff := cmp.Diff(reqBodyValues, expectedReqBody); diff != "" {
+			if diff := cmp.Diff(expectedReqBody, reqBodyValues); diff != "" {
 				t.Fatalf("Unexpected request body (-want +got):\n%s", diff)
 			}
 
@@ -277,7 +277,7 @@ func TestAuthentication(t *testing.T) {
 		}
 		cmpOpts := cmp.Options{cmpopts.IgnoreUnexported(oauth2.Token{}), cmpopts.EquateApproxTime(time.Minute)}
 
-		if diff := cmp.Diff(token, expectedToken, cmpOpts); diff != "" {
+		if diff := cmp.Diff(expectedToken, token, cmpOpts); diff != "" {
 			t.Fatalf("Unexpected token (-want +got):\n%s", diff)
 		}
 
@@ -303,6 +303,15 @@ func TestAuthentication(t *testing.T) {
 		}
 		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
 			t.Fatalf("Unexpected requests:\n%s", diff)
+		}
+	})
+
+	t.Run("with nothing", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := NewClient()
+		if !errors.Is(err, ErrNoAuthMeanProvided) {
+			t.Fatalf("Expected error to be %v, got %v", ErrNoAuthMeanProvided, err)
 		}
 	})
 
@@ -351,7 +360,7 @@ func TestAuthentication(t *testing.T) {
 		}
 		cmpOpts := cmp.Options{cmpopts.IgnoreFields(oauth2.RetrieveError{}, "Response")}
 
-		if diff := cmp.Diff(unwrappErr.Unwrap(), expectedErr, cmpOpts); diff != "" {
+		if diff := cmp.Diff(expectedErr, unwrappErr.Unwrap(), cmpOpts); diff != "" {
 			t.Fatalf("Unexpected token (-want +got):\n%s", diff)
 		}
 
@@ -435,7 +444,7 @@ func TestAuthentication(t *testing.T) {
 				},
 				ErrorCode: "error code",
 			}
-			if diff := cmp.Diff(err, expectedErr); diff != "" {
+			if diff := cmp.Diff(expectedErr, err); diff != "" {
 				t.Fatalf("Unexpected error (-want +got):\n%s", diff)
 			}
 		})

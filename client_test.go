@@ -27,7 +27,7 @@ func makeClientMockForDo(t *testing.T, handler mockHandler) (c *Client, requestC
 		},
 	}
 
-	c, err := NewClient(WithHTTPClient(clientMock))
+	c, err := NewClient(WithCredentials("u", ""), WithHTTPClient(clientMock))
 	if err != nil {
 		t.Fatal("Failed to initialize client:", err)
 	}
@@ -149,7 +149,7 @@ func TestClientDo(t *testing.T) {
 				t.Fatalf("Expected body to be %q, got %q", tc.expectedBody, body)
 			}
 
-			if diff := cmp.Diff(err, tc.expectedErr, cmpopts.EquateEmpty(), equateErrorStr("*fmt.wrapError")); diff != "" {
+			if diff := cmp.Diff(tc.expectedErr, err, cmpopts.EquateEmpty(), equateErrorStr("*fmt.wrapError")); diff != "" {
 				t.Fatalf("Unexpected error (-want +got):\n%s", diff)
 			}
 		})
@@ -158,7 +158,10 @@ func TestClientDo(t *testing.T) {
 	t.Run("unreadable body", func(t *testing.T) {
 		t.Parallel()
 
-		client, err := NewClient(WithHTTPClient(&http.Client{Transport: &unreadableTransportMock{status: 200}}))
+		client, err := NewClient(
+			WithCredentials("u", ""),
+			WithHTTPClient(&http.Client{Transport: &unreadableTransportMock{status: 200}}),
+		)
 		if err != nil {
 			t.Fatal("Failed to initialize client:", err)
 		}
@@ -178,7 +181,7 @@ func TestClientDo(t *testing.T) {
 			Message:    "failed to read response body",
 			Err:        errUnreadable,
 		}
-		if diff := cmp.Diff(err, expectedErr, cmpopts.EquateEmpty(), equateErrorStr("*errors.errorString")); diff != "" {
+		if diff := cmp.Diff(expectedErr, err, cmpopts.EquateEmpty(), equateErrorStr("*errors.errorString")); diff != "" {
 			t.Fatalf("Unexpected error (-want +got):\n%s", diff)
 		}
 	})

@@ -29,6 +29,8 @@ var (
 	ErrTokenIsRefreshOnly = errors.New("the OAuth token can only be refreshed")
 	// ErrTokenHasNoRefresh is returned when the OAuth access token has no associated refresh token.
 	ErrTokenHasNoRefresh = errors.New("the OAuth token has no refresh")
+	// ErrNoAuthMeanProvided is returned when the client has no way to retrieve an OAuth token.
+	ErrNoAuthMeanProvided = errors.New("no authentication mean provided")
 	// ErrTokenRevoke is returned when the logout operation has not been completed successfully.
 	ErrTokenRevoke = errors.New("failed to revoke token")
 	// ErrResourceNotFound is returned when the resource with the specified ID doesn't exist.

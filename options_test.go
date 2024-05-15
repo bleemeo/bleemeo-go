@@ -55,6 +55,7 @@ func mustParseURL(t *testing.T, s string) *url.URL {
 func TestOptions(t *testing.T) {
 	t.Parallel()
 
+	creds := WithCredentials("u", "")
 	oauthMockClient := &http.Client{Transport: oauthMockTransport{}}
 	defaultEndpointURL := mustParseURL(t, defaultEndpoint)
 
@@ -66,8 +67,14 @@ func TestOptions(t *testing.T) {
 		expectedClient Client
 	}{
 		{
-			name: "no options",
+			name:          "no options",
+			expectedError: ErrNoAuthMeanProvided,
+		},
+		{
+			name:    "no (optional) options",
+			options: []ClientOption{creds},
 			expectedClient: Client{
+				username:      "u",
 				endpoint:      defaultEndpoint,
 				oAuthClientID: defaultOAuthClientID,
 				client:        oauthMockClient,
@@ -77,10 +84,10 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:    "with credentials",
-			options: []ClientOption{WithCredentials("u", "p")},
+			options: []ClientOption{WithCredentials("usr", "pwd")},
 			expectedClient: Client{
-				username:      "u",
-				password:      "p",
+				username:      "usr",
+				password:      "pwd",
 				endpoint:      defaultEndpoint,
 				oAuthClientID: defaultOAuthClientID,
 				client:        oauthMockClient,
@@ -90,8 +97,9 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:    "with endpoint",
-			options: []ClientOption{WithEndpoint("http://my-proxy.internal")},
+			options: []ClientOption{WithEndpoint("http://my-proxy.internal"), creds},
 			expectedClient: Client{
+				username:      "u",
 				endpoint:      "http://my-proxy.internal",
 				oAuthClientID: defaultOAuthClientID,
 				client:        oauthMockClient,
@@ -101,7 +109,7 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:    "invalid endpoint",
-			options: []ClientOption{WithEndpoint(":")},
+			options: []ClientOption{WithEndpoint(":"), creds},
 			expectedError: fmt.Errorf("invalid endpoint URL: %w", &url.Error{
 				Op:  "parse",
 				URL: ":",
@@ -110,8 +118,9 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:    "with OAuth client ID",
-			options: []ClientOption{WithOAuthClient("123456789", "53CR37")},
+			options: []ClientOption{WithOAuthClient("123456789", "53CR37"), creds},
 			expectedClient: Client{
+				username:          "u",
 				endpoint:          defaultEndpoint,
 				oAuthClientID:     "123456789",
 				oAuthClientSecret: "53CR37",
@@ -122,8 +131,9 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:    "with Bleemeo account header",
-			options: []ClientOption{WithBleemeoAccountHeader("eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3")},
+			options: []ClientOption{WithBleemeoAccountHeader("eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3"), creds},
 			expectedClient: Client{
+				username:      "u",
 				endpoint:      defaultEndpoint,
 				oAuthClientID: defaultOAuthClientID,
 				client:        oauthMockClient,
@@ -171,7 +181,7 @@ func TestOptions(t *testing.T) {
 				epURL: mustParseURL(t, "http://my-proxy.internal"),
 			},
 		},
-		// We can assume that WithHTTPClient() works since it is used in all above cases.
+		// We can assume that WithHTTPClient() works since it is used in all the above cases.
 	}
 
 	for _, testCase := range cases {
@@ -188,7 +198,7 @@ func TestOptions(t *testing.T) {
 			}
 
 			client, err := NewClient(append(tc.options, WithHTTPClient(oauthMockClient))...)
-			if diff := cmp.Diff(err, tc.expectedError, cmp.Comparer(errorComparer)); diff != "" {
+			if diff := cmp.Diff(tc.expectedError, err, cmp.Comparer(errorComparer)); diff != "" {
 				t.Fatalf("Client initialization: unexpected error (-want +got):\n%s", diff)
 			}
 
