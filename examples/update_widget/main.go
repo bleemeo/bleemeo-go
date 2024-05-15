@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/url"
 
 	"github.com/bleemeo/bleemeo-go"
 )
@@ -31,7 +32,7 @@ func main() {
 		context.Background(),
 		bleemeo.ResourceWidget,
 		pageNumber, pageSize,
-		bleemeo.Params{"title": "My widget", "fields": "id,dashboard"},
+		url.Values{"title": {"My widget"}, "fields": {"id,dashboard"}},
 	)
 	if err != nil {
 		log.Fatalln("Failed to fetch widget:", err)

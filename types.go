@@ -20,23 +20,7 @@ import (
 	"encoding/json"
 )
 
-// DefaultFields will make the API to return the model's basic fields.
-// Default fields vary from one model to another.
-var DefaultFields Fields = nil //nolint:gochecknoglobals, revive
-
 type (
-	// Fields represents the list of fields to retrieve for a given model.
-	Fields = []string
-	// Params represents a set of URL query parameters.
-	//
-	// For example, a parameter may be a comma-separated field list:
-	// [Params]{"fields": "id,label,labels_text"}
-	// Note: if no fields are specified, DefaultFields will be used.
-	//
-	// Or a value to filter a metric listing query:
-	// [Params]{"search": "kubernetes"}
-	Params = map[string]string
-
 	// A ResultsPage represents a section of a resource listing.
 	ResultsPage struct {
 		// The total number of the requested resource available on the API.

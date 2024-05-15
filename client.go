@@ -25,7 +25,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 
 	"golang.org/x/oauth2"
 )
@@ -55,6 +54,11 @@ type Client struct {
 // NewClient initializes a Bleemeo API client with the given options.
 // The credentials must be provided by some option.
 // The option WithConfigurationFromEnv() might be useful for a default configuration.
+//
+// See the README (https://github.com/bleemeo/bleemeo-go/#configuration) for all available options.
+//
+// It will take care of obtaining and refreshing the OAuth token
+// to authenticate against the Bleemeo API.
 func NewClient(opts ...ClientOption) (*Client, error) {
 	c := &Client{
 		endpoint:      defaultEndpoint,
@@ -96,11 +100,10 @@ func (c *Client) Logout(ctx context.Context) error {
 }
 
 // Get the resource with the given id, with only the given fields, if not nil.
-func (c *Client) Get(ctx context.Context, resource Resource, id string, fields Fields) (json.RawMessage, error) {
+func (c *Client) Get(ctx context.Context, resource Resource, id string, fields ...string) (json.RawMessage, error) {
 	reqURI := fmt.Sprintf("%s/%s/", resource, id)
-	params := Params{"fields": strings.Join(fields, ",")}
 
-	return unmarshalResponse(c.Do(ctx, http.MethodGet, reqURI, params, true, nil))
+	return unmarshalResponse(c.Do(ctx, http.MethodGet, reqURI, paramsFromFields(fields), true, nil))
 }
 
 // GetPage returns a list of resources that match given params at the given page,
@@ -108,11 +111,11 @@ func (c *Client) Get(ctx context.Context, resource Resource, id string, fields F
 // To collect all resources matching params (i.e., instead of querying all pages),
 // prefer using Iterator() which is faster.
 func (c *Client) GetPage(
-	ctx context.Context, resource Resource, page, pageSize int, params Params,
+	ctx context.Context, resource Resource, page, pageSize int, params url.Values,
 ) (ResultsPage, error) {
 	params = cloneMap(params) // avoid mutation of given params
-	params["page"] = strconv.Itoa(page)
-	params["page_size"] = strconv.Itoa(pageSize)
+	params.Set("page", strconv.Itoa(page))
+	params.Set("page_size", strconv.Itoa(pageSize))
 
 	_, resp, err := c.Do(ctx, http.MethodGet, string(resource+"/"), params, true, nil)
 	if err != nil {
@@ -136,7 +139,7 @@ func (c *Client) GetPage(
 }
 
 // Count the number of resources of the given kind matching the given parameters.
-func (c *Client) Count(ctx context.Context, resource Resource, params Params) (int, error) {
+func (c *Client) Count(ctx context.Context, resource Resource, params url.Values) (int, error) {
 	result, err := c.GetPage(ctx, resource, 1, 0, params)
 	if err != nil {
 		return 0, err
@@ -146,21 +149,23 @@ func (c *Client) Count(ctx context.Context, resource Resource, params Params) (i
 }
 
 // Iterator returns all resources that match given params.
-func (c *Client) Iterator(resource Resource, params Params) Iterator {
+func (c *Client) Iterator(resource Resource, params url.Values) Iterator {
 	return newIterator(c, resource, params)
 }
 
-// Create a resource with the given body.
-func (c *Client) Create(ctx context.Context, resource Resource, body any) (json.RawMessage, error) {
+// Create a resource with the given body, which may be any value
+// that could be converted to JSON, possibly a simple map[string]string.
+func (c *Client) Create(ctx context.Context, resource Resource, body any, fields ...string) (json.RawMessage, error) {
 	bodyReader, err := jsonReaderFrom(body)
 	if err != nil {
 		return nil, err
 	}
 
-	return unmarshalResponse(c.Do(ctx, http.MethodPost, string(resource+"/"), nil, true, bodyReader))
+	return unmarshalResponse(c.Do(ctx, http.MethodPost, string(resource+"/"), paramsFromFields(fields), true, bodyReader))
 }
 
-// Update the resource with the given id, with the given body.
+// Update the resource with the given id, with the given body, which may be any value
+// that could be converted to JSON, possibly a simple map[string]string.
 func (c *Client) Update(ctx context.Context, resource Resource, id string, body any) (json.RawMessage, error) {
 	bodyReader, err := jsonReaderFrom(body)
 	if err != nil {
@@ -178,10 +183,12 @@ func (c *Client) Delete(ctx context.Context, resource Resource, id string) error
 	return err
 }
 
-// Do builds and execute the request according to the given parameters.
+// Do is a lower-level method to build and execute the request according to the given parameters.
 // It returns the response status code and body content, or any error that occurred.
+//
+// When possible, prefer the higher-level Get, GetPage, Iterator, Create, Update and Delete.
 func (c *Client) Do(
-	ctx context.Context, method, reqURI string, params Params, authenticated bool, body io.Reader,
+	ctx context.Context, method, reqURI string, params url.Values, authenticated bool, body io.Reader,
 ) (int, []byte, error) {
 	reqURL, err := c.epURL.Parse(reqURI)
 	if err != nil {
@@ -190,8 +197,10 @@ func (c *Client) Do(
 
 	q := reqURL.Query()
 
-	for key, value := range params {
-		q.Set(key, value)
+	for key, values := range params {
+		for _, value := range values {
+			q.Add(key, value)
+		}
 	}
 
 	reqURL.RawQuery = q.Encode()

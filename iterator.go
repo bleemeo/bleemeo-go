@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 )
 
 // An Iterator allows browsing all the resources of a specific kind,
@@ -38,7 +39,7 @@ type Iterator interface {
 	Err() error
 }
 
-func newIterator(c *Client, resource Resource, params Params) *iterator {
+func newIterator(c *Client, resource Resource, params url.Values) *iterator {
 	return &iterator{
 		c:        c,
 		resource: resource,
@@ -49,7 +50,7 @@ func newIterator(c *Client, resource Resource, params Params) *iterator {
 type iterator struct {
 	c        *Client
 	resource Resource
-	params   Params
+	params   url.Values
 
 	currentPage  *ResultsPage
 	currentIndex int

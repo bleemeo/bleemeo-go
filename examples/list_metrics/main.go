@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/url"
 
 	"github.com/bleemeo/bleemeo-go"
 )
@@ -28,7 +29,7 @@ func main() {
 
 	// Retrieving only the id and label of each metric:
 	// the fewer fields required, the faster the query.
-	iter := client.Iterator(bleemeo.ResourceMetric, bleemeo.Params{"fields": "id,label", "active": "True"})
+	iter := client.Iterator(bleemeo.ResourceMetric, url.Values{"fields": {"id,label"}, "active": {"True"}})
 	count := 0
 
 	type metricType struct {

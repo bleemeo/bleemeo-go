@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"testing"
 
@@ -110,7 +111,7 @@ func TestIterator(t *testing.T) {
 		t.Parallel()
 
 		client, requestCounter := makeClientMockForIteration(t, makeMetricMockHandler(3, 5))
-		iter := client.Iterator(ResourceMetric, Params{})
+		iter := client.Iterator(ResourceMetric, url.Values{})
 		objectsCount := 0
 
 		type retObject struct {
@@ -156,7 +157,7 @@ func TestIterator(t *testing.T) {
 			t, makeMetricMockHandler(0, 10),
 			WithInitialOAuthRefreshToken("refresh"),
 		)
-		iter := client.Iterator(ResourceMetric, Params{})
+		iter := client.Iterator(ResourceMetric, url.Values{})
 		objectsCount := 0
 
 		for iter.Next(context.Background()) {
@@ -188,7 +189,7 @@ func TestIterator(t *testing.T) {
 		}
 
 		client, requestCounter := makeClientMockForIteration(t, handler)
-		iter := client.Iterator(ResourceMetric, Params{})
+		iter := client.Iterator(ResourceMetric, url.Values{})
 		objectsCount := 0
 
 		for iter.Next(context.Background()) {
@@ -230,7 +231,7 @@ func TestIterator(t *testing.T) {
 		}
 
 		client, requestCounter := makeClientMockForIteration(t, handler)
-		iter := client.Iterator(ResourceMetric, Params{})
+		iter := client.Iterator(ResourceMetric, url.Values{})
 		objectsCount := 0
 
 		for iter.Next(context.Background()) {
@@ -284,7 +285,7 @@ func TestIterator(t *testing.T) {
 			}
 		}()
 
-		client.Iterator(ResourceMetric, Params{}).At()
+		client.Iterator(ResourceMetric, url.Values{}).At()
 
 		t.Fatal("Expected Iterator.At() to panic")
 	})

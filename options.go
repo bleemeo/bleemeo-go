@@ -34,14 +34,16 @@ func WithCredentials(username, password string) ClientOption {
 	}
 }
 
-// WithEndpoint will make the client use the given endpoint over the default one.
-func WithEndpoint(endpoint string) ClientOption {
+// WithBleemeoAccountHeader will make the client include the given account ID
+// in the X-Bleemeo-Account request header.
+// This is required if your credentials have access to multiple Bleemeo accounts.
+func WithBleemeoAccountHeader(accountID string) ClientOption {
 	return func(c *Client) {
-		c.endpoint = endpoint
+		c.headers["X-Bleemeo-Account"] = accountID
 	}
 }
 
-// WithOAuthClient will make the client use the given OAuth client ID/secret.
+// WithOAuthClient will make the client use the given OAuth client ID/secret over the default one.
 func WithOAuthClient(clientID, clientSecret string) ClientOption {
 	return func(c *Client) {
 		c.oAuthClientID = clientID
@@ -49,16 +51,15 @@ func WithOAuthClient(clientID, clientSecret string) ClientOption {
 	}
 }
 
-// WithBleemeoAccountHeader will make the client include the given account ID
-// in the X-Bleemeo-Account request header.
-func WithBleemeoAccountHeader(accountID string) ClientOption {
+// WithEndpoint will make the client use the given endpoint over the default one.
+func WithEndpoint(endpoint string) ClientOption {
 	return func(c *Client) {
-		c.headers["X-Bleemeo-Account"] = accountID
+		c.endpoint = endpoint
 	}
 }
 
-// WithInitialOAuthRefreshToken will make the client use the given refresh token
-// for authenticating against the API, instead of regular user/password credentials.
+// WithInitialOAuthRefreshToken will make the client prefer the given refresh token
+// over regular user/password credentials for authenticating against the API.
 func WithInitialOAuthRefreshToken(refreshToken string) ClientOption {
 	return func(c *Client) {
 		c.oAuthInitialRefresh = refreshToken
@@ -70,11 +71,11 @@ func WithInitialOAuthRefreshToken(refreshToken string) ClientOption {
 //
 // - credentials: "BLEEMEO_USER" & "BLEEMEO_PASSWORD"
 //
-// - API URL: "BLEEMEO_API_URL"
+// - Bleemeo account ID: "BLEEMEO_ACCOUNT_ID"
 //
 // - OAuth client ID/secret: "BLEEMEO_OAUTH_CLIENT_ID" & "BLEEMEO_OAUTH_CLIENT_SECRET"
 //
-// - Bleemeo account ID: "BLEEMEO_ACCOUNT_ID"
+// - API URL: "BLEEMEO_API_URL"
 //
 // - Initial refresh token: "BLEEMEO_OAUTH_INITIAL_REFRESH_TOKEN"
 func WithConfigurationFromEnv() ClientOption {
@@ -87,20 +88,20 @@ func WithConfigurationFromEnv() ClientOption {
 			c.password = password
 		}
 
-		if apiURL, set := os.LookupEnv("BLEEMEO_API_URL"); set {
-			c.endpoint = apiURL
+		if accountID, set := os.LookupEnv("BLEEMEO_ACCOUNT_ID"); set {
+			c.headers["X-Bleemeo-Account"] = accountID
 		}
 
 		if oAuthClientID, set := os.LookupEnv("BLEEMEO_OAUTH_CLIENT_ID"); set {
 			c.oAuthClientID = oAuthClientID
 		}
 
-		if oAuthClientSecret, set := os.LookupEnv("BLEEMEO_OAUTH_CLIENT_SECRET"); set {
-			c.oAuthClientSecret = oAuthClientSecret
+		if apiURL, set := os.LookupEnv("BLEEMEO_API_URL"); set {
+			c.endpoint = apiURL
 		}
 
-		if accountID, set := os.LookupEnv("BLEEMEO_ACCOUNT_ID"); set {
-			c.headers["X-Bleemeo-Account"] = accountID
+		if oAuthClientSecret, set := os.LookupEnv("BLEEMEO_OAUTH_CLIENT_SECRET"); set {
+			c.oAuthClientSecret = oAuthClientSecret
 		}
 
 		if refreshToken, set := os.LookupEnv("BLEEMEO_OAUTH_INITIAL_REFRESH_TOKEN"); set {

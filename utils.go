@@ -22,6 +22,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -44,6 +45,16 @@ func jsonReaderFrom(body any) (io.Reader, error) {
 	}
 
 	return bytes.NewReader(data), nil
+}
+
+func paramsFromFields(fields []string) url.Values {
+	if len(fields) == 0 {
+		return nil
+	}
+
+	return url.Values{
+		"fields": {strings.Join(fields, ",")},
+	}
 }
 
 func cleanupResponse(resp *http.Response) {

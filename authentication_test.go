@@ -171,7 +171,7 @@ func TestAuthentication(t *testing.T) {
 			t.Fatalf("Unexpected token (-want +got):\n%s", diff)
 		}
 
-		_, err = client.Get(context.Background(), ResourceAgent, "<id>", DefaultFields)
+		_, err = client.Get(context.Background(), ResourceAgent, "<id>")
 		if err != nil {
 			t.Fatal("Failed to execute request:", err)
 		}
@@ -184,7 +184,7 @@ func TestAuthentication(t *testing.T) {
 
 		expectedAccessToken = secondAccessTk
 
-		_, err = client.Get(context.Background(), ResourceAgent, "<id>", DefaultFields)
+		_, err = client.Get(context.Background(), ResourceAgent, "<id>")
 		if err != nil {
 			t.Fatal("Failed to execute request:", err)
 		}
@@ -281,7 +281,7 @@ func TestAuthentication(t *testing.T) {
 			t.Fatalf("Unexpected token (-want +got):\n%s", diff)
 		}
 
-		_, err = client.Get(context.Background(), ResourceAgent, "<id>", DefaultFields)
+		_, err = client.Get(context.Background(), ResourceAgent, "<id>")
 		if err != nil {
 			t.Fatal("Failed to execute request:", err)
 		}
@@ -333,7 +333,7 @@ func TestAuthentication(t *testing.T) {
 			t.Fatal("Unexpected error:", err)
 		}
 
-		_, err = client.Get(context.Background(), ResourceAgent, "<id>", DefaultFields)
+		_, err = client.Get(context.Background(), ResourceAgent, "<id>")
 		if err == nil {
 			t.Fatal("Expected an error, got none.")
 		}

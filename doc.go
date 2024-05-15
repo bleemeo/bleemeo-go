@@ -15,7 +15,7 @@
 // limitations under the License.
 
 /*
-Package bleemeo provides simple ways to interact with the Bleemeo API.
+Package bleemeo provides simple ways to interact with the Bleemeo API (https://go.bleemeo.com/l/doc-api).
 -> TODO
 */
 package bleemeo

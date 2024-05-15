@@ -160,7 +160,7 @@ func (ap *authenticationProvider) Token(ctx context.Context) (*oauth2.Token, err
 		ap.token, err = ap.newToken(ctx)
 	case !ap.token.Valid():
 		if ap.token.RefreshToken == "" {
-			return nil, ErrTokenHasNoRefresh
+			return nil, errTokenHasNoRefresh
 		}
 
 		ap.token, err = ap.refreshToken(ctx, ap.token.RefreshToken)

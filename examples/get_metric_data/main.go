@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/bleemeo/bleemeo-go"
@@ -33,7 +34,7 @@ func main() {
 		context.Background(),
 		bleemeo.ResourceMetric,
 		pageNumber, pageSize,
-		bleemeo.Params{"fields": "id,label", "active": "True"},
+		url.Values{"fields": {"id,label"}, "active": {"True"}},
 	)
 	if err != nil {
 		log.Fatalln("Failed to fetch metric page:", err)
