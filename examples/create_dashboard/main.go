@@ -25,7 +25,7 @@ func main() {
 		}
 	}()
 
-	dashboard, err := client.Create(context.Background(), bleemeo.ResourceDashboard, bleemeo.Body{"name": "My dashboard"})
+	dashboard, err := client.Create(context.Background(), bleemeo.ResourceDashboard, map[string]any{"name": "My dashboard"})
 	if err != nil {
 		log.Fatalln("Error creating dashboard:", err)
 	}
@@ -46,7 +46,7 @@ func main() {
 	widget, err := client.Create(
 		context.Background(),
 		bleemeo.ResourceWidget,
-		bleemeo.Body{"dashboard": dashboardObj.ID, "title": "My widget", "graph": bleemeo.Graph_Text},
+		map[string]any{"dashboard": dashboardObj.ID, "title": "My widget", "graph": bleemeo.Graph_Text},
 	)
 	if err != nil {
 		log.Fatalln("Error creating widget:", err)

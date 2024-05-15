@@ -27,7 +27,7 @@ import (
 
 // jsonReaderFrom marshals the given content to JSON,
 // and returns a reader to the marshaled data.
-func jsonReaderFrom(body Body) (io.Reader, error) {
+func jsonReaderFrom(body any) (io.Reader, error) {
 	if body == nil {
 		return nil, nil
 	}
@@ -53,6 +53,11 @@ func cleanupResponse(resp *http.Response) {
 	_ = resp.Body.Close()
 }
 
+// unmarshalResponse converts the given body to a [json.RawMessage],
+// while ensuring it is actually valid JSON.
+// If the given error is not nil, it will be returned immediately
+// without any processing, along with a nil [json.RawMessage].
+// It takes an int as first parameter just to match the return signature of the [Client.Do] method.
 func unmarshalResponse(_ int, respBody []byte, err error) (json.RawMessage, error) {
 	if err != nil {
 		return nil, err

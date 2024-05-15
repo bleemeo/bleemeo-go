@@ -135,7 +135,7 @@ func (c *Client) Iterator(resource Resource, params Params) Iterator {
 }
 
 // Create a resource with the given body.
-func (c *Client) Create(ctx context.Context, resource Resource, body Body) (json.RawMessage, error) {
+func (c *Client) Create(ctx context.Context, resource Resource, body any) (json.RawMessage, error) {
 	bodyReader, err := jsonReaderFrom(body)
 	if err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ func (c *Client) Create(ctx context.Context, resource Resource, body Body) (json
 }
 
 // Update the resource with the given id, with the given body.
-func (c *Client) Update(ctx context.Context, resource Resource, id string, body Body) (json.RawMessage, error) {
+func (c *Client) Update(ctx context.Context, resource Resource, id string, body any) (json.RawMessage, error) {
 	bodyReader, err := jsonReaderFrom(body)
 	if err != nil {
 		return nil, err

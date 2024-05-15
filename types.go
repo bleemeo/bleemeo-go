@@ -18,10 +18,6 @@ package bleemeo
 
 import (
 	"encoding/json"
-	"fmt"
-	"reflect"
-
-	"github.com/go-viper/mapstructure/v2"
 )
 
 // DefaultFields will make the API to return the model's basic fields.
@@ -40,9 +36,6 @@ type (
 	// Or a value to filter a metric listing query:
 	// [Params]{"search": "kubernetes"}
 	Params = map[string]string
-	// A Body represents the data to create or update.
-	// It will be marshaled to JSON before being sent to the API.
-	Body = map[string]any
 
 	// A ResultsPage represents a section of a resource listing.
 	ResultsPage struct {
@@ -53,29 +46,3 @@ type (
 		Results  []json.RawMessage `json:"results"`
 	}
 )
-
-// MakeBodyFrom converts the given value to a [Body].
-// The value must be a map or a struct.
-// Struct fields with json tags are supported.
-func MakeBodyFrom(v any) (Body, error) {
-	vKind := reflect.ValueOf(v).Kind()
-	if vKind != reflect.Map && vKind != reflect.Struct {
-		return nil, fmt.Errorf("%w, not a %T", ErrBodyNotMapOrStruct, v)
-	}
-
-	var body Body
-
-	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{Result: &body, TagName: "json"})
-	if err != nil {
-		// This error isn't due to the value given by the user;
-		// thus, it should never happen in production.
-		panic("could not create decoder: " + err.Error())
-	}
-
-	err = decoder.Decode(v)
-	if err != nil {
-		return body, fmt.Errorf("can't convert the given body: %w", err)
-	}
-
-	return body, nil
-}

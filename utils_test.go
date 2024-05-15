@@ -17,8 +17,11 @@
 package bleemeo
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
+	"net"
 	"reflect"
 	"testing"
 
@@ -32,7 +35,7 @@ func TestJsonReaderFrom(t *testing.T) {
 	t.Run("valid JSON", func(t *testing.T) {
 		t.Parallel()
 
-		reader, err := jsonReaderFrom(Body{"p1": "v1", "p2": 6.3})
+		reader, err := jsonReaderFrom(map[string]any{"p1": "v1", "p2": 6.3})
 		if err != nil {
 			t.Fatal("Failed to make reader:", err)
 		}
@@ -51,7 +54,7 @@ func TestJsonReaderFrom(t *testing.T) {
 	t.Run("invalid JSON", func(t *testing.T) {
 		t.Parallel()
 
-		data := Body{"f": func() {}} // unlikely but invalid data
+		data := map[string]any{"f": func() {}} // unlikely but invalid data
 
 		_, err := jsonReaderFrom(data)
 		if err == nil {
@@ -75,4 +78,59 @@ func TestJsonReaderFrom(t *testing.T) {
 			t.Fatalf("Unexpected error (-want +got):\n%s", diff)
 		}
 	})
+}
+
+func TestUnmarshalResponse(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name      string
+		inputData []byte
+		inputErr  error
+		// no check required on the expected data
+		expectedErr error
+	}{
+		{
+			name:        "valid JSON",
+			inputData:   []byte(`{"id": "123"}`),
+			inputErr:    nil,
+			expectedErr: nil,
+		},
+		{
+			name:      "invalid JSON",
+			inputData: []byte(`{"partial":`),
+			inputErr:  nil,
+			expectedErr: &JSONUnmarshalError{
+				jsonError: &jsonError{
+					// Reproducing the expected error, since we can't build it ourselves
+					Err:      json.Unmarshal([]byte(`{"partial":`), new(json.RawMessage)),
+					DataKind: JsonErrorDataKind_RequestBody,
+					Data:     []byte(`{"partial":`),
+				},
+			},
+		},
+		{
+			name:        "response error",
+			inputData:   nil,
+			inputErr:    net.ErrClosed,
+			expectedErr: net.ErrClosed,
+		},
+	}
+
+	for _, testCase := range cases {
+		tc := testCase
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			output, err := unmarshalResponse(0, tc.inputData, tc.inputErr)
+			if err == nil && !bytes.Equal(output, tc.inputData) {
+				t.Fatalf("Expected the output to be exactly the input, but got %q", string(output))
+			}
+
+			if !errors.Is(err, tc.expectedErr) {
+				t.Fatalf("Expected the error to be %v, but got %v", tc.expectedErr, err)
+			}
+		})
+	}
 }

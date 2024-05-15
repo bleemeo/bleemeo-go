@@ -57,7 +57,7 @@ func main() {
 		context.Background(),
 		bleemeo.ResourceWidget,
 		widgetObj.ID,
-		bleemeo.Body{"title": "This is my widget"},
+		map[string]any{"title": "This is my widget"},
 	)
 	if err != nil {
 		log.Fatalln("Failed to update widget:", err)

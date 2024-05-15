@@ -19,6 +19,7 @@ package bleemeo
 import (
 	"errors"
 	"fmt"
+	"reflect"
 )
 
 const errorRespMaxLength = 1 << 20 // 1MB
@@ -131,14 +132,38 @@ func (jsonErr *jsonError) Unwrap() error {
 	return jsonErr.Err
 }
 
+func (jsonErr *jsonError) Is(other error) bool {
+	if err := new(jsonError); errors.As(other, &err) {
+		if err.DataKind != jsonErr.DataKind || !reflect.DeepEqual(err.Data, jsonErr.Data) {
+			return false
+		}
+
+		if errors.Is(err.Err, jsonErr.Err) {
+			return true
+		}
+
+		return reflect.DeepEqual(err.Err, jsonErr.Err)
+	}
+
+	return false
+}
+
 // JSONMarshalError represents an error that occurred
 // during the serialization of data to JSON.
 type JSONMarshalError struct {
 	*jsonError
 }
 
-func (jme *JSONMarshalError) Error() string {
-	return "marshalling " + jme.jsonError.Error()
+func (marshalErr *JSONMarshalError) Error() string {
+	return "marshalling " + marshalErr.jsonError.Error()
+}
+
+func (marshalErr *JSONMarshalError) Is(other error) bool {
+	if err := new(JSONMarshalError); errors.As(other, &err) {
+		return marshalErr.jsonError.Is(err.jsonError)
+	}
+
+	return false
 }
 
 // JSONUnmarshalError represents an error that occurred
@@ -147,6 +172,14 @@ type JSONUnmarshalError struct {
 	*jsonError
 }
 
-func (jme *JSONUnmarshalError) Error() string {
-	return "unmarshalling " + jme.jsonError.Error()
+func (unmarshalErr *JSONUnmarshalError) Error() string {
+	return "unmarshalling " + unmarshalErr.jsonError.Error()
+}
+
+func (unmarshalErr *JSONUnmarshalError) Is(other error) bool {
+	if err := new(JSONUnmarshalError); errors.As(other, &err) {
+		return unmarshalErr.jsonError.Is(err.jsonError)
+	}
+
+	return false
 }
