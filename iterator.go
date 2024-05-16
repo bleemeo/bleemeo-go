@@ -60,6 +60,10 @@ type iterator struct {
 }
 
 func (iter *iterator) Count(ctx context.Context) (int, error) {
+	if iter.err != nil {
+		return 0, iter.err
+	}
+
 	if iter.currentPage == nil {
 		if !iter.fetchPage(ctx) {
 			return 0, iter.err
@@ -76,6 +80,10 @@ func (iter *iterator) Count(ctx context.Context) (int, error) {
 }
 
 func (iter *iterator) Next(ctx context.Context) bool {
+	if iter.err != nil {
+		return false
+	}
+
 	if iter.currentPage == nil || iter.currentIndex >= len(iter.currentPage.Results)-1 {
 		if !iter.fetchPage(ctx) {
 			return false

@@ -94,6 +94,12 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	return c, nil
 }
 
+// GetToken returns the current OAuth token used by the client,
+// or retrieves a new one if the current is invalid.
+func (c *Client) GetToken(ctx context.Context) (*oauth2.Token, error) {
+	return c.authProvider.Token(ctx)
+}
+
 // Logout revokes the OAuth token, preventing it from being reused.
 func (c *Client) Logout(ctx context.Context) error {
 	return c.authProvider.logout(ctx, c.endpoint)
@@ -157,7 +163,7 @@ func (c *Client) Iterator(resource Resource, params url.Values) Iterator {
 // that could be converted to JSON, possibly a simple map[string]string.
 // Fields expected to be returned can be specified as variadic parameters.
 func (c *Client) Create(ctx context.Context, resource Resource, body any, fields ...string) (json.RawMessage, error) {
-	bodyReader, err := jsonReaderFrom(body)
+	bodyReader, err := JSONReaderFrom(body)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +176,7 @@ func (c *Client) Create(ctx context.Context, resource Resource, body any, fields
 // Since the request is sent as a PATCH, only the fields specified in the body will be updated.
 // Fields expected to be returned can be specified as variadic parameters.
 func (c *Client) Update(ctx context.Context, resource Resource, id string, body any, fields ...string) (json.RawMessage, error) {
-	bodyReader, err := jsonReaderFrom(body)
+	bodyReader, err := JSONReaderFrom(body)
 	if err != nil {
 		return nil, err
 	}

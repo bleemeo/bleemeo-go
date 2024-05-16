@@ -35,7 +35,7 @@ func TestJsonReaderFrom(t *testing.T) {
 	t.Run("valid JSON", func(t *testing.T) {
 		t.Parallel()
 
-		reader, err := jsonReaderFrom(map[string]any{"p1": "v1", "p2": 6.3})
+		reader, err := JSONReaderFrom(map[string]any{"p1": "v1", "p2": 6.3})
 		if err != nil {
 			t.Fatal("Failed to make reader:", err)
 		}
@@ -56,7 +56,7 @@ func TestJsonReaderFrom(t *testing.T) {
 
 		data := map[string]any{"f": func() {}} // unlikely but invalid data
 
-		_, err := jsonReaderFrom(data)
+		_, err := JSONReaderFrom(data)
 		if err == nil {
 			t.Fatal("Expected error, got none")
 		}

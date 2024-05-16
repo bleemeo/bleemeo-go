@@ -26,9 +26,9 @@ import (
 	"strings"
 )
 
-// jsonReaderFrom marshals the given content to JSON,
+// JSONReaderFrom marshals the given content to JSON,
 // and returns a reader to the marshaled data.
-func jsonReaderFrom(body any) (io.Reader, error) {
+func JSONReaderFrom(body any) (io.Reader, error) {
 	if body == nil {
 		return nil, nil
 	}
