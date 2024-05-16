@@ -17,7 +17,7 @@
 package bleemeo
 
 // A Resource represents a route to a model on the Bleemeo API
-type Resource string
+type Resource = string
 
 // Available resources on the Bleemeo API.
 const (

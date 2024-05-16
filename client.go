@@ -117,7 +117,7 @@ func (c *Client) GetPage(
 	params.Set("page", strconv.Itoa(page))
 	params.Set("page_size", strconv.Itoa(pageSize))
 
-	_, resp, err := c.Do(ctx, http.MethodGet, string(resource+"/"), params, true, nil)
+	_, resp, err := c.Do(ctx, http.MethodGet, resource+"/", params, true, nil)
 	if err != nil {
 		return ResultsPage{}, err
 	}
@@ -155,24 +155,29 @@ func (c *Client) Iterator(resource Resource, params url.Values) Iterator {
 
 // Create a resource with the given body, which may be any value
 // that could be converted to JSON, possibly a simple map[string]string.
+// Fields expected to be returned can be specified as variadic parameters.
 func (c *Client) Create(ctx context.Context, resource Resource, body any, fields ...string) (json.RawMessage, error) {
 	bodyReader, err := jsonReaderFrom(body)
 	if err != nil {
 		return nil, err
 	}
 
-	return unmarshalResponse(c.Do(ctx, http.MethodPost, string(resource+"/"), paramsFromFields(fields), true, bodyReader))
+	return unmarshalResponse(c.Do(ctx, http.MethodPost, resource+"/", paramsFromFields(fields), true, bodyReader))
 }
 
 // Update the resource with the given id, with the given body, which may be any value
 // that could be converted to JSON, possibly a simple map[string]string.
-func (c *Client) Update(ctx context.Context, resource Resource, id string, body any) (json.RawMessage, error) {
+// Since the request is sent as a PATCH, only the fields specified in the body will be updated.
+// Fields expected to be returned can be specified as variadic parameters.
+func (c *Client) Update(ctx context.Context, resource Resource, id string, body any, fields ...string) (json.RawMessage, error) {
 	bodyReader, err := jsonReaderFrom(body)
 	if err != nil {
 		return nil, err
 	}
 
-	return unmarshalResponse(c.Do(ctx, http.MethodPatch, fmt.Sprintf("%s/%s/", resource, id), nil, true, bodyReader))
+	reqURI := fmt.Sprintf("%s/%s/", resource, id)
+
+	return unmarshalResponse(c.Do(ctx, http.MethodPatch, reqURI, paramsFromFields(fields), true, bodyReader))
 }
 
 // Delete the resource with the given id.
@@ -190,22 +195,12 @@ func (c *Client) Delete(ctx context.Context, resource Resource, id string) error
 func (c *Client) Do(
 	ctx context.Context, method, reqURI string, params url.Values, authenticated bool, body io.Reader,
 ) (int, []byte, error) {
-	reqURL, err := c.epURL.Parse(reqURI)
+	req, err := c.ParseRequest(method, reqURI, nil, params, body)
 	if err != nil {
-		return 0, nil, fmt.Errorf("bad request URI: %w", err)
+		return 0, nil, err
 	}
 
-	q := reqURL.Query()
-
-	for key, values := range params {
-		for _, value := range values {
-			q.Add(key, value)
-		}
-	}
-
-	reqURL.RawQuery = q.Encode()
-
-	resp, err := c.do(ctx, method, reqURL.String(), authenticated, body)
+	resp, err := c.do(ctx, req, authenticated)
 	if err != nil {
 		return 0, nil, fmt.Errorf("request execution failed: %w", err)
 	}
@@ -218,7 +213,7 @@ func (c *Client) Do(
 			return 0, nil, fmt.Errorf("failed to refetch token: %w", err)
 		}
 
-		resp, err = c.do(ctx, method, reqURL.String(), authenticated, body) //nolint:bodyclose
+		resp, err = c.do(ctx, req.Clone(ctx), authenticated) //nolint:bodyclose
 		if err != nil {
 			return 0, nil, fmt.Errorf("request execution retry failed: %w", err)
 		}
@@ -228,7 +223,7 @@ func (c *Client) Do(
 
 	if resp.StatusCode >= 500 {
 		return resp.StatusCode, nil, &APIError{
-			ReqPath:     reqURL.Path,
+			ReqPath:     reqURI,
 			StatusCode:  resp.StatusCode,
 			ContentType: resp.Header.Get("Content-Type"),
 			Message:     resp.Status,
@@ -239,7 +234,7 @@ func (c *Client) Do(
 	if resp.StatusCode >= 400 {
 		bodyStart := readBodyStart(resp.Body)
 		apiErr := APIError{
-			ReqPath:     reqURL.Path,
+			ReqPath:     reqURI,
 			StatusCode:  resp.StatusCode,
 			ContentType: resp.Header.Get("Content-Type"),
 			Message:     resp.Status,
@@ -265,7 +260,7 @@ func (c *Client) Do(
 		case resp.StatusCode == http.StatusUnauthorized:
 			return resp.StatusCode, nil, buildAuthErrorFromBody(&apiErr, bodyStart)
 		case resp.StatusCode == http.StatusNotFound:
-			apiErr.Err = fmt.Errorf("%w: %s", ErrResourceNotFound, reqURL.Path)
+			apiErr.Err = fmt.Errorf("%w: %s", ErrResourceNotFound, reqURI)
 		}
 
 		return resp.StatusCode, nil, &apiErr
@@ -279,7 +274,7 @@ func (c *Client) Do(
 	_, err = respBuf.ReadFrom(resp.Body)
 	if err != nil {
 		return resp.StatusCode, nil, &APIError{
-			ReqPath:     reqURL.Path,
+			ReqPath:     reqURI,
 			StatusCode:  resp.StatusCode,
 			ContentType: resp.Header.Get("Content-Type"),
 			Message:     "failed to read response body",
@@ -291,20 +286,54 @@ func (c *Client) Do(
 	return resp.StatusCode, respBuf.Bytes(), nil
 }
 
-func (c *Client) do(
-	ctx context.Context, method, reqURL string, authenticated bool, reqBody io.Reader,
-) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, method, reqURL, reqBody)
+// DoRequest sends the given request and returns the response or any error.
+// If authenticated is true, the request will be sent with an Authorization header.
+// If an error occurs, it will be returned as-is.
+func (c *Client) DoRequest(ctx context.Context, req *http.Request, authenticated bool) (*http.Response, error) {
+	return c.do(ctx, req, authenticated)
+}
+
+// ParseRequest returns a new [*http.Request] according to the given values.
+// The URL may or may not contain a host, if not, the client's endpoint will be used as such.
+func (c *Client) ParseRequest(
+	method, url string, headers http.Header, params url.Values, body io.Reader,
+) (*http.Request, error) {
+	reqURL, err := c.epURL.Parse(url)
+	if err != nil {
+		return nil, fmt.Errorf("bad request URL: %w", err)
+	}
+
+	q := reqURL.Query()
+
+	for key, values := range params {
+		for _, value := range values {
+			q.Add(key, value)
+		}
+	}
+
+	reqURL.RawQuery = q.Encode()
+
+	req, err := http.NewRequest(method, reqURL.String(), body) //nolint: noctx // The context will be set by the request executor
 	if err != nil {
 		return nil, fmt.Errorf("can't parse request: %w", err)
 	}
 
-	if reqBody != nil {
+	if body != nil && headers.Get("Content-Type") == "" {
 		req.Header.Set("Content-Type", "application/json")
 	}
 
+	for header, values := range headers {
+		for _, value := range values {
+			req.Header.Add(header, value)
+		}
+	}
+
+	return req, nil
+}
+
+func (c *Client) do(ctx context.Context, req *http.Request, authenticated bool) (*http.Response, error) {
 	if authenticated {
-		err = c.authProvider.injectHeader(ctx, req)
+		err := c.authProvider.injectHeader(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -314,7 +343,7 @@ func (c *Client) do(
 		req.Header.Set(header, value)
 	}
 
-	resp, err := c.client.Do(req)
+	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
 		return nil, err //nolint:wrapcheck
 	}
