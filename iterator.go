@@ -28,6 +28,8 @@ import (
 // optionally matching specified parameters,
 // and automatically fetching the next page when needed.
 type Iterator interface {
+	// Count returns the total number of resources available for iteration.
+	Count(ctx context.Context) (int, error)
 	// Next sets the iteration cursor on the next resource,
 	// fetching the next result page if necessary.
 	// It returns whether iteration can continue or not.
@@ -55,6 +57,22 @@ type iterator struct {
 	currentPage  *ResultsPage
 	currentIndex int
 	err          error
+}
+
+func (iter *iterator) Count(ctx context.Context) (int, error) {
+	if iter.currentPage == nil {
+		if !iter.fetchPage(ctx) {
+			return 0, iter.err
+		}
+
+		// Since the currentPage is no longer nil,
+		// Next() will treat the iteration as already started,
+		// and thus increment the currentIndex by 1.
+		// By setting it to -1, we prevent skipping the first object.
+		iter.currentIndex = -1
+	}
+
+	return iter.currentPage.Count, nil
 }
 
 func (iter *iterator) Next(ctx context.Context) bool {

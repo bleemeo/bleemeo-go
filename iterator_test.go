@@ -110,8 +110,24 @@ func TestIterator(t *testing.T) {
 	t.Run("normal iteration", func(t *testing.T) {
 		t.Parallel()
 
-		client, requestCounter := makeClientMockForIteration(t, makeMetricMockHandler(3, 5))
+		const (
+			availablePages = 3
+			pageSize       = 5
+			totalResources = availablePages * pageSize
+		)
+
+		client, requestCounter := makeClientMockForIteration(t, makeMetricMockHandler(availablePages, pageSize))
 		iter := client.Iterator(ResourceMetric, url.Values{})
+
+		count, err := iter.Count(context.Background())
+		if err != nil {
+			t.Fatal("Failed to get resources count:", err)
+		}
+
+		if count != totalResources {
+			t.Fatalf("Expected count to return %d resources, got %d", totalResources, count)
+		}
+
 		objectsCount := 0
 
 		type retObject struct {
@@ -129,7 +145,7 @@ func TestIterator(t *testing.T) {
 			}
 
 			if retOjb.ID != objectsCount {
-				t.Fatalf("Invalid returned object %v: want ID=%d", retOjb, objectsCount)
+				t.Fatalf("Invalid returned object %+v: want ID=%d", retOjb, objectsCount)
 			}
 		}
 
@@ -137,8 +153,8 @@ func TestIterator(t *testing.T) {
 			t.Fatal("Iterator error:", err)
 		}
 
-		if objectsCount != 15 {
-			t.Fatalf("Expected %d objects, got %d", 15, objectsCount)
+		if objectsCount != totalResources {
+			t.Fatalf("Expected %d objects, got %d", totalResources, objectsCount)
 		}
 
 		expectedRequests := map[string]int{

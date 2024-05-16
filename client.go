@@ -258,7 +258,7 @@ func (c *Client) Do(
 				apiErr.Message = "Bad request:" + makeBadRequestMessage(respBody)
 			}
 		case resp.StatusCode == http.StatusUnauthorized:
-			return resp.StatusCode, nil, buildAuthErrorFromBody(&apiErr, bodyStart)
+			return resp.StatusCode, nil, buildAuthErrorFromBody(&apiErr)
 		case resp.StatusCode == http.StatusNotFound:
 			apiErr.Err = fmt.Errorf("%w: %s", ErrResourceNotFound, reqURI)
 		}

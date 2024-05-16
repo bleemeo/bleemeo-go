@@ -288,7 +288,7 @@ func buildAuthError(reqPath string, retErr *oauth2.RetrieveError) *AuthError {
 	}
 }
 
-func buildAuthErrorFromBody(apiErr *APIError, respBody []byte) error {
+func buildAuthErrorFromBody(apiErr *APIError) error {
 	authErr := AuthError{
 		APIError: apiErr,
 	}
@@ -305,12 +305,12 @@ func buildAuthErrorFromBody(apiErr *APIError, respBody []byte) error {
 		} `json:"messages"`
 	}
 
-	if err := json.Unmarshal(respBody, &respData); err != nil {
+	if err := json.Unmarshal(apiErr.Response, &respData); err != nil {
 		authErr.Err = &JSONUnmarshalError{
 			&jsonError{
 				Err:      err,
 				DataKind: JsonErrorDataKind_401Details,
-				Data:     respBody,
+				Data:     apiErr.Response,
 			},
 		}
 
@@ -326,7 +326,7 @@ func buildAuthErrorFromBody(apiErr *APIError, respBody []byte) error {
 	case respData.Detail != "":
 		authErr.Message = respData.Detail
 	default:
-		authErr.Message = string(respBody)
+		authErr.Message = string(apiErr.Response)
 	}
 
 	return &authErr
