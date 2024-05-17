@@ -94,19 +94,24 @@ func (iter *iterator) Err() error {
 }
 
 func (iter *iterator) fetchPage(ctx context.Context) (ok bool) {
-	var reqURI string
+	var (
+		reqURI string
+		params url.Values
+	)
 
 	if iter.currentPage == nil { // first fetch
 		reqURI = fmt.Sprintf("/%s/", iter.resource)
+		params = iter.params
 	} else {
 		if iter.currentPage.Next == "" {
 			return false
 		}
 
 		reqURI = iter.currentPage.Next
+		params = nil
 	}
 
-	_, resp, err := iter.c.Do(ctx, http.MethodGet, reqURI, iter.params, true, nil)
+	_, resp, err := iter.c.Do(ctx, http.MethodGet, reqURI, params, true, nil)
 	if err != nil {
 		iter.err = err
 
