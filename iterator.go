@@ -60,23 +60,7 @@ type iterator struct {
 }
 
 func (iter *iterator) Count(ctx context.Context) (int, error) {
-	if iter.err != nil {
-		return 0, iter.err
-	}
-
-	if iter.currentPage == nil {
-		if !iter.fetchPage(ctx) {
-			return 0, iter.err
-		}
-
-		// Since the currentPage is no longer nil,
-		// Next() will treat the iteration as already started,
-		// and thus increment the currentIndex by 1.
-		// By setting it to -1, we prevent skipping the first object.
-		iter.currentIndex = -1
-	}
-
-	return iter.currentPage.Count, nil
+	return iter.c.Count(ctx, iter.resource, iter.params)
 }
 
 func (iter *iterator) Next(ctx context.Context) bool {

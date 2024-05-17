@@ -50,8 +50,6 @@ func main() {
 			fmt.Println("-> ", metricObj)
 		} else if count == 201 {
 			fmt.Println("Listing has more than 200 metrics, only the first 200 metrics are shown")
-
-			break
 		}
 	}
 

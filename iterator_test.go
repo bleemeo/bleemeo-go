@@ -36,12 +36,12 @@ func authMockHandler(*http.Request) (int, []byte, error) {
 	), nil
 }
 
-func makeMetricMockHandler(availablePages, pageSize int) mockHandler {
-	makeResults := func(page int) []json.RawMessage {
+func makeMetricMockHandler(availableResources int) mockHandler {
+	makeResults := func(page, pageSize int) []json.RawMessage {
 		results := make([]json.RawMessage, pageSize)
 
 		for i := 0; i < pageSize; i++ {
-			results[i] = []byte(fmt.Sprintf(`{"id": %d}`, (page-1)*pageSize+i+1))
+			results[i] = json.RawMessage(fmt.Sprintf(`{"id": %d}`, (page-1)*pageSize+i+1))
 		}
 
 		return results
@@ -49,22 +49,35 @@ func makeMetricMockHandler(availablePages, pageSize int) mockHandler {
 
 	return func(r *http.Request) (statusCode int, body []byte, err error) {
 		currentPage := 1
+		pageSize := 5
 
-		if q := r.URL.Query(); q.Has("page") {
+		q := r.URL.Query()
+		if q.Has("page") {
 			currentPage, err = strconv.Atoi(q.Get("page"))
 			if err != nil {
 				return 0, nil, fmt.Errorf("cannot parse current page %q: %w", q.Get("page"), err)
 			}
 		}
 
-		var result ResultsPage
+		if q.Has("page_size") {
+			pageSize, err = strconv.Atoi(q.Get("page_size"))
+			if err != nil {
+				return 0, nil, fmt.Errorf("cannot parse page size %q: %w", q.Get("page_size"), err)
+			}
+		}
 
-		if currentPage <= availablePages {
-			result.Count = availablePages * pageSize
-			result.Results = makeResults(currentPage)
+		result := ResultsPage{
+			Count: availableResources,
+		}
 
-			if currentPage < availablePages {
-				result.Next = fmt.Sprintf("%s/v1/metric/?page=%d", defaultEndpoint, currentPage+1)
+		if pageSize > 0 {
+			availablePages := availableResources / pageSize
+			if currentPage <= availablePages {
+				result.Results = makeResults(currentPage, pageSize)
+
+				if currentPage < availablePages {
+					result.Next = fmt.Sprintf("%s/v1/metric/?page=%d", defaultEndpoint, currentPage+1)
+				}
 			}
 		}
 
@@ -110,13 +123,9 @@ func TestIterator(t *testing.T) {
 	t.Run("normal iteration", func(t *testing.T) {
 		t.Parallel()
 
-		const (
-			availablePages = 3
-			pageSize       = 5
-			totalResources = availablePages * pageSize
-		)
+		const totalResources = 15 // the default page size is 5
 
-		client, requestCounter := makeClientMockForIteration(t, makeMetricMockHandler(availablePages, pageSize))
+		client, requestCounter := makeClientMockForIteration(t, makeMetricMockHandler(totalResources))
 		iter := client.Iterator(ResourceMetric, url.Values{})
 
 		count, err := iter.Count(context.Background())
@@ -159,7 +168,7 @@ func TestIterator(t *testing.T) {
 
 		expectedRequests := map[string]int{
 			tokenPath:     1,
-			"/v1/metric/": 3,
+			"/v1/metric/": 4, // 3 pages + 1 count
 		}
 		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
 			t.Fatalf("Unexpected requests (-want +got):\n%s", diff)
@@ -170,7 +179,7 @@ func TestIterator(t *testing.T) {
 		t.Parallel()
 
 		client, requestCounter := makeClientMockForIteration(
-			t, makeMetricMockHandler(0, 10),
+			t, makeMetricMockHandler(0),
 			WithInitialOAuthRefreshToken("refresh"),
 		)
 		iter := client.Iterator(ResourceMetric, url.Values{})
