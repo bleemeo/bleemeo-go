@@ -28,8 +28,6 @@ import (
 // optionally matching specified parameters,
 // and automatically fetching the next page when needed.
 type Iterator interface {
-	// Count returns the total number of resources available for iteration.
-	Count(ctx context.Context) (int, error)
 	// Next sets the iteration cursor on the next resource,
 	// fetching the next result page if necessary.
 	// It returns whether iteration can continue or not.
@@ -57,10 +55,6 @@ type iterator struct {
 	currentPage  *ResultsPage
 	currentIndex int
 	err          error
-}
-
-func (iter *iterator) Count(ctx context.Context) (int, error) {
-	return iter.c.Count(ctx, iter.resource, iter.params)
 }
 
 func (iter *iterator) Next(ctx context.Context) bool {
@@ -108,6 +102,8 @@ func (iter *iterator) fetchPage(ctx context.Context) (ok bool) {
 		}
 
 		reqURI = iter.currentPage.Next
+		// Query parameters were given back in the next URL,
+		// so no need to re-add them (otherwise, they will grow infinitely).
 		params = nil
 	}
 

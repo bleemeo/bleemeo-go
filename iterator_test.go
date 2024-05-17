@@ -127,16 +127,6 @@ func TestIterator(t *testing.T) {
 
 		client, requestCounter := makeClientMockForIteration(t, makeMetricMockHandler(totalResources))
 		iter := client.Iterator(ResourceMetric, url.Values{})
-
-		count, err := iter.Count(context.Background())
-		if err != nil {
-			t.Fatal("Failed to get resources count:", err)
-		}
-
-		if count != totalResources {
-			t.Fatalf("Expected count to return %d resources, got %d", totalResources, count)
-		}
-
 		objectsCount := 0
 
 		type retObject struct {
@@ -168,7 +158,7 @@ func TestIterator(t *testing.T) {
 
 		expectedRequests := map[string]int{
 			tokenPath:     1,
-			"/v1/metric/": 4, // 3 pages + 1 count
+			"/v1/metric/": 3,
 		}
 		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
 			t.Fatalf("Unexpected requests (-want +got):\n%s", diff)
