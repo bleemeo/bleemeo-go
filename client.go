@@ -175,7 +175,9 @@ func (c *Client) Create(ctx context.Context, resource Resource, body any, fields
 // that could be converted to JSON, possibly a simple map[string]string.
 // Since the request is sent as a PATCH, only the fields specified in the body will be updated.
 // Fields expected to be returned can be specified as variadic parameters.
-func (c *Client) Update(ctx context.Context, resource Resource, id string, body any, fields ...string) (json.RawMessage, error) {
+func (c *Client) Update(
+	ctx context.Context, resource Resource, id string, body any, fields ...string,
+) (json.RawMessage, error) {
 	bodyReader, err := JSONReaderFrom(body)
 	if err != nil {
 		return nil, err
@@ -206,23 +208,9 @@ func (c *Client) Do(
 		return 0, nil, err
 	}
 
-	resp, err := c.do(ctx, req, authenticated)
+	resp, err := c.DoRequest(ctx, req, authenticated)
 	if err != nil {
 		return 0, nil, fmt.Errorf("request execution failed: %w", err)
-	}
-
-	if resp.StatusCode == 401 && authenticated {
-		cleanupResponse(resp)
-
-		err = c.authProvider.refetchToken(ctx)
-		if err != nil {
-			return 0, nil, fmt.Errorf("failed to refetch token: %w", err)
-		}
-
-		resp, err = c.do(ctx, req.Clone(ctx), authenticated) //nolint:bodyclose
-		if err != nil {
-			return 0, nil, fmt.Errorf("request execution retry failed: %w", err)
-		}
 	}
 
 	defer cleanupResponse(resp)
@@ -294,9 +282,29 @@ func (c *Client) Do(
 
 // DoRequest sends the given request and returns the response or any error.
 // If authenticated is true, the request will be sent with an Authorization header.
-// If an error occurs, it will be returned as-is.
+// If the API returns a 401 status code, a new token will be fetched and the request will be sent once again.
+// It is up to the caller to close the response body.
 func (c *Client) DoRequest(ctx context.Context, req *http.Request, authenticated bool) (*http.Response, error) {
-	return c.do(ctx, req, authenticated)
+	resp, err := c.do(ctx, req, authenticated)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode == 401 && authenticated {
+		cleanupResponse(resp)
+
+		err = c.authProvider.refetchToken(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to refetch token: %w", err)
+		}
+
+		resp, err = c.do(ctx, req.Clone(ctx), authenticated) //nolint:bodyclose
+		if err != nil {
+			return nil, fmt.Errorf("request execution retry failed: %w", err)
+		}
+	}
+
+	return resp, nil
 }
 
 // ParseRequest returns a new [*http.Request] according to the given values.
@@ -328,6 +336,10 @@ func (c *Client) ParseRequest(
 		req.Header.Set("Content-Type", "application/json")
 	}
 
+	for header, value := range c.headers {
+		req.Header.Set(header, value)
+	}
+
 	for header, values := range headers {
 		for _, value := range values {
 			req.Header.Add(header, value)
@@ -343,10 +355,6 @@ func (c *Client) do(ctx context.Context, req *http.Request, authenticated bool) 
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	for header, value := range c.headers {
-		req.Header.Set(header, value)
 	}
 
 	resp, err := c.client.Do(req.WithContext(ctx))
