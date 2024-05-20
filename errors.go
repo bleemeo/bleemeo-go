@@ -41,6 +41,7 @@ var (
 // JSONErrorDataKind indicates the type of data whose conversion failed.
 type JSONErrorDataKind int
 
+//nolint: revive,stylecheck,gofmt,gofumpt,goimports
 const (
 	JsonErrorDataKind_400Details JSONErrorDataKind = iota
 	JsonErrorDataKind_401Details
@@ -159,6 +160,7 @@ func (marshalErr *JSONMarshalError) Error() string {
 	return "marshalling " + marshalErr.jsonError.Error()
 }
 
+// Is returns whether the given error is the same as this.
 func (marshalErr *JSONMarshalError) Is(other error) bool {
 	if err := new(JSONMarshalError); errors.As(other, &err) {
 		return marshalErr.jsonError.Is(err.jsonError)
@@ -177,6 +179,7 @@ func (unmarshalErr *JSONUnmarshalError) Error() string {
 	return "unmarshalling " + unmarshalErr.jsonError.Error()
 }
 
+// Is returns whether the given error is the same as this.
 func (unmarshalErr *JSONUnmarshalError) Is(other error) bool {
 	if err := new(JSONUnmarshalError); errors.As(other, &err) {
 		return unmarshalErr.jsonError.Is(err.jsonError)

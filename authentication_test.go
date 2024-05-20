@@ -68,7 +68,7 @@ func makeClientMockForAuth(
 	return client, requestCounter, err
 }
 
-func TestAuthentication(t *testing.T) {
+func TestAuthentication(t *testing.T) { //nolint:maintidx
 	t.Parallel()
 
 	t.Run("with credentials", func(t *testing.T) {

@@ -4,26 +4,26 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"net/url"
 
 	"github.com/bleemeo/bleemeo-go"
 )
 
-// Listing the first 200 metrics of the account
+// Listing the first 200 metrics of the account.
 func main() {
 	client, err := bleemeo.NewClient(
 		bleemeo.WithConfigurationFromEnv(),
+		bleemeo.WithCredentials("a", "b"),
 	)
 	if err != nil {
-		log.Fatalln("Failed to initialize client:", err)
+		log.Panicln("Failed to initialize client:", err)
 	}
 
 	defer func() {
 		err := client.Logout(context.Background())
 		if err != nil {
-			log.Fatalln("Logout:", err)
+			log.Panicln("Logout:", err)
 		}
 	}()
 
@@ -42,29 +42,29 @@ func main() {
 
 		err := json.Unmarshal(iter.At(), &metricObj)
 		if err != nil {
-			log.Fatalln("Failed to unmarshal metric:", err)
+			log.Panicln("Failed to unmarshal metric:", err)
 		}
 
 		count++
 		if count <= 200 {
-			fmt.Println("-> ", metricObj)
+			log.Println("-> ", metricObj)
 		} else if count == 201 {
-			fmt.Println("Listing has more than 200 metrics, only the first 200 metrics are shown")
+			log.Println("Listing has more than 200 metrics, only the first 200 metrics are shown")
 		}
 	}
 
 	if err = iter.Err(); err != nil {
 		if authErr := new(bleemeo.AuthError); errors.As(err, &authErr) {
 			// An AuthError is also an APIError
-			log.Fatalln("Authentication error:", authErr.ErrorCode, "/", authErr.Message)
+			log.Panicln("Authentication error:", authErr.ErrorCode, "/", authErr.Message)
 		}
 
 		if apiErr := new(bleemeo.APIError); errors.As(err, &apiErr) {
-			log.Fatalln("API error:", apiErr.StatusCode, "-", apiErr.Message)
+			log.Panicln("API error:", apiErr.StatusCode, "-", apiErr.Message)
 		}
 
-		log.Fatalln("Iteration error:", err)
+		log.Panicln("Iteration error:", err)
 	}
 
-	fmt.Printf("Successfully retrieved %d metrics from API\n", count)
+	log.Printf("Successfully retrieved %d metrics from API\n", count)
 }

@@ -3,26 +3,25 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/url"
 
 	"github.com/bleemeo/bleemeo-go"
 )
 
-// Updating the content of a widget
+// Updating the content of a widget.
 func main() {
 	client, err := bleemeo.NewClient(
 		bleemeo.WithConfigurationFromEnv(),
 	)
 	if err != nil {
-		log.Fatalln("Failed to initialize client:", err)
+		log.Panicln("Failed to initialize client:", err)
 	}
 
 	defer func() {
 		err := client.Logout(context.Background())
 		if err != nil {
-			log.Fatalln("Logout:", err)
+			log.Panicln("Logout:", err)
 		}
 	}()
 
@@ -35,11 +34,11 @@ func main() {
 		url.Values{"title": {"My widget"}, "fields": {"id,dashboard"}},
 	)
 	if err != nil {
-		log.Fatalln("Failed to fetch widget:", err)
+		log.Panicln("Failed to fetch widget:", err)
 	}
 
 	if len(resultPage.Results) == 0 {
-		log.Fatalln("Widget not found")
+		log.Panicln("Widget not found")
 	}
 
 	var widgetObj struct {
@@ -51,7 +50,7 @@ func main() {
 
 	err = json.Unmarshal(resultPage.Results[0], &widgetObj)
 	if err != nil {
-		log.Fatalln("Error unmarshalling widget:", err)
+		log.Panicln("Error unmarshalling widget:", err)
 	}
 
 	widget, err := client.Update(
@@ -61,14 +60,14 @@ func main() {
 		map[string]any{"title": "This is my widget"},
 	)
 	if err != nil {
-		log.Fatalln("Failed to update widget:", err)
+		log.Panicln("Failed to update widget:", err)
 	}
 
 	err = json.Unmarshal(widget, &widgetObj)
 	if err != nil {
-		log.Fatalln("Error unmarshalling updated widget:", err)
+		log.Panicln("Error unmarshalling updated widget:", err)
 	}
 
-	fmt.Println("Successfully updated widget:", widgetObj)
-	fmt.Println("Check it on https://panel.bleemeo.com/dashboard/" + widgetObj.DashboardID)
+	log.Println("Successfully updated widget:", widgetObj)
+	log.Println("Check it on https://panel.bleemeo.com/dashboard/" + widgetObj.DashboardID)
 }

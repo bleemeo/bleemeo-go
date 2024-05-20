@@ -327,7 +327,7 @@ func (c *Client) ParseRequest(
 
 	reqURL.RawQuery = q.Encode()
 
-	req, err := http.NewRequest(method, reqURL.String(), body) //nolint: noctx // The context will be set by the request executor
+	req, err := http.NewRequest(method, reqURL.String(), body) //nolint: lll,noctx // The context will be set by the request executor
 	if err != nil {
 		return nil, fmt.Errorf("can't parse request: %w", err)
 	}

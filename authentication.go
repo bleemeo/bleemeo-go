@@ -32,8 +32,10 @@ import (
 
 const tokenPath = "/o/token/"
 
-type tokenProvider func(ctx context.Context) (*oauth2.Token, error)
-type tokenRefresher func(ctx context.Context, refreshToken string) (*oauth2.Token, error)
+type (
+	tokenProvider  func(ctx context.Context) (*oauth2.Token, error)
+	tokenRefresher func(ctx context.Context, refreshToken string) (*oauth2.Token, error)
+)
 
 type userAgentTransporter struct {
 	userAgentHeader string

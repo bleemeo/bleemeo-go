@@ -77,7 +77,7 @@ func WithInitialOAuthRefreshToken(refreshToken string) ClientOption {
 //
 // - API URL: "BLEEMEO_API_URL"
 //
-// - Initial refresh token: "BLEEMEO_OAUTH_INITIAL_REFRESH_TOKEN"
+// - Initial refresh token: "BLEEMEO_OAUTH_INITIAL_REFRESH_TOKEN".
 func WithConfigurationFromEnv() ClientOption {
 	return func(c *Client) {
 		if username, set := os.LookupEnv("BLEEMEO_USER"); set {

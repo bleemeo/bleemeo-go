@@ -140,7 +140,8 @@ func TestOptions(t *testing.T) {
 				endpoint:      defaultEndpoint,
 				oAuthClientID: defaultOAuthClientID,
 				client:        oauthMockClient,
-				headers: map[string]string{"User-Agent": defaultUserAgent,
+				headers: map[string]string{
+					"User-Agent":        defaultUserAgent,
 					"X-Bleemeo-Account": "eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3",
 				},
 				epURL: defaultEndpointURL,
@@ -178,7 +179,8 @@ func TestOptions(t *testing.T) {
 				oAuthClientSecret:   "53CR37",
 				oAuthInitialRefresh: "refresh-token",
 				client:              oauthMockClient,
-				headers: map[string]string{"User-Agent": defaultUserAgent,
+				headers: map[string]string{
+					"User-Agent":        defaultUserAgent,
 					"X-Bleemeo-Account": "eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3",
 				},
 				epURL: mustParseURL(t, "http://my-proxy.internal"),

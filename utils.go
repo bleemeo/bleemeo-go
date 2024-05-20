@@ -30,7 +30,7 @@ import (
 // and returns a reader to the marshaled data.
 func JSONReaderFrom(body any) (io.Reader, error) {
 	if body == nil {
-		return nil, nil
+		return nil, nil //nolint: nilnil
 	}
 
 	data, err := json.Marshal(body)
