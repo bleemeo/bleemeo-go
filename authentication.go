@@ -169,9 +169,12 @@ func (ap *authenticationProvider) Token(ctx context.Context) (*oauth2.Token, err
 				ap.token, err = ap.newToken(ctx)
 			}
 		}
+	default:
+		return ap.token, nil
 	}
 
-	if ap.newOAuthTokenCallback != nil {
+	// A new token has been retrieved (if no error occurred)
+	if ap.newOAuthTokenCallback != nil && err == nil {
 		ap.newOAuthTokenCallback(ap.token)
 	}
 

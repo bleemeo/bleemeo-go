@@ -298,7 +298,7 @@ func (c *Client) DoRequest(ctx context.Context, req *http.Request, authenticated
 			return nil, fmt.Errorf("failed to refetch token: %w", err)
 		}
 
-		resp, err = c.do(ctx, req.Clone(ctx), authenticated) //nolint:bodyclose
+		resp, err = c.do(ctx, req.Clone(ctx), authenticated)
 		if err != nil {
 			return nil, fmt.Errorf("request execution retry failed: %w", err)
 		}
