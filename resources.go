@@ -24,6 +24,7 @@ const (
 	ResourceAccount               Resource = "v1/account"
 	ResourceAccountConfig         Resource = "v1/accountconfig"
 	ResourceAgentConfig           Resource = "v1/agentconfig"
+	ResourceApplication           Resource = "v1/application"
 	ResourceAuditLog              Resource = "v1/auditlog"
 	ResourceAgent                 Resource = "v1/agent"
 	ResourceAgentFact             Resource = "v1/agentfact"
