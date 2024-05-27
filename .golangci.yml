@@ -17,15 +17,6 @@ linters:
     - nonamedreturns # Warn for every named return, not useful.
     - interfacebloat # Warn when an interface has too many methods, not useful.
     # Deprecated and replaced linter.
-    - maligned
-    - golint
-    - interfacer
-    - scopelint
-    - ifshort
-    - deadcode
-    - structcheck
-    - varcheck
-    - nosnakecase
     - execinquery
     # We use maintidx to lint function complexity.
     - gocyclo
