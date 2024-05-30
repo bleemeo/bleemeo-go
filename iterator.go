@@ -19,7 +19,6 @@ package bleemeo
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 )
@@ -94,7 +93,7 @@ func (iter *iterator) fetchPage(ctx context.Context) (ok bool) {
 	)
 
 	if iter.currentPage == nil { // first fetch
-		reqURI = fmt.Sprintf("/%s/", iter.resource)
+		reqURI = "/" + iter.resource
 		params = iter.params
 	} else {
 		if iter.currentPage.Next == "" {

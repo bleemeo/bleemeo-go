@@ -107,7 +107,7 @@ func (c *Client) Logout(ctx context.Context) error {
 
 // Get the resource with the given id, with only the given fields, if not nil.
 func (c *Client) Get(ctx context.Context, resource Resource, id string, fields ...string) (json.RawMessage, error) {
-	reqURI := fmt.Sprintf("%s/%s/", resource, id)
+	reqURI := fmt.Sprintf("%s%s/", resource, id)
 
 	return unmarshalResponse(c.Do(ctx, http.MethodGet, reqURI, paramsFromFields(fields), true, nil))
 }
@@ -123,7 +123,7 @@ func (c *Client) GetPage(
 	params.Set("page", strconv.Itoa(page))
 	params.Set("page_size", strconv.Itoa(pageSize))
 
-	_, resp, err := c.Do(ctx, http.MethodGet, resource+"/", params, true, nil)
+	_, resp, err := c.Do(ctx, http.MethodGet, resource, params, true, nil)
 	if err != nil {
 		return ResultsPage{}, err
 	}
@@ -168,7 +168,7 @@ func (c *Client) Create(ctx context.Context, resource Resource, body any, fields
 		return nil, err
 	}
 
-	return unmarshalResponse(c.Do(ctx, http.MethodPost, resource+"/", paramsFromFields(fields), true, bodyReader))
+	return unmarshalResponse(c.Do(ctx, http.MethodPost, resource, paramsFromFields(fields), true, bodyReader))
 }
 
 // Update the resource with the given id, with the given body, which may be any value
@@ -183,14 +183,14 @@ func (c *Client) Update(
 		return nil, err
 	}
 
-	reqURI := fmt.Sprintf("%s/%s/", resource, id)
+	reqURI := fmt.Sprintf("%s%s/", resource, id)
 
 	return unmarshalResponse(c.Do(ctx, http.MethodPatch, reqURI, paramsFromFields(fields), true, bodyReader))
 }
 
 // Delete the resource with the given id.
 func (c *Client) Delete(ctx context.Context, resource Resource, id string) error {
-	reqURI := fmt.Sprintf("%s/%s/", resource, id)
+	reqURI := fmt.Sprintf("%s%s/", resource, id)
 	_, _, err := c.Do(ctx, http.MethodDelete, reqURI, nil, true, nil)
 
 	return err

@@ -54,7 +54,7 @@ func main() {
 		log.Panicln("Failed to unmarshal metric:", err)
 	}
 
-	resource := fmt.Sprintf("%s/%s/data/", bleemeo.ResourceMetric, metricObj.ID)
+	resource := fmt.Sprintf("%s%s/data/", bleemeo.ResourceMetric, metricObj.ID)
 
 	statusCode, resp, err := client.Do(context.Background(), http.MethodGet, resource, nil, true, nil)
 	if err != nil {

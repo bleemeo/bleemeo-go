@@ -14,7 +14,6 @@ import (
 func main() {
 	client, err := bleemeo.NewClient(
 		bleemeo.WithConfigurationFromEnv(),
-		bleemeo.WithCredentials("a", "b"),
 	)
 	if err != nil {
 		log.Panicln("Failed to initialize client:", err)
