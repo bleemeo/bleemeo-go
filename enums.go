@@ -29,7 +29,7 @@ const (
 	AgentType_AWS_S3             AgentType = "aws_s3"
 	AgentType_Agent              AgentType = "agent"
 	AgentType_Monitor            AgentType = "connection_check"
-	AgentType_Snmp               AgentType = "snmp"
+	AgentType_SNMP               AgentType = "snmp"
 	AgentType_K8s                AgentType = "kubernetes"
 	AgentType_vSphereCluster     AgentType = "vsphere_cluster"
 	AgentType_vSphereHost        AgentType = "vsphere_host"
@@ -84,6 +84,37 @@ const (
 	ReportIncluded_Full    ReportIncluded = 2
 )
 
+type ConfigItemSource int
+
+const (
+	ConfigItemSource_Unknown ConfigItemSource = 0
+	ConfigItemSource_Default ConfigItemSource = 1
+	ConfigItemSource_File    ConfigItemSource = 2
+	ConfigItemSource_Env     ConfigItemSource = 3
+	ConfigItemSource_API     ConfigItemSource = 4
+)
+
+type ConfigItemType int
+
+const (
+	ConfigItemType_Any               ConfigItemType = 0
+	ConfigItemType_Int               ConfigItemType = 1
+	ConfigItemType_Float             ConfigItemType = 2
+	ConfigItemType_Bool              ConfigItemType = 3
+	ConfigItemType_String            ConfigItemType = 4
+	ConfigItemType_ListString        ConfigItemType = 10
+	ConfigItemType_ListInt           ConfigItemType = 11
+	ConfigItemType_MapStrStr         ConfigItemType = 20
+	ConfigItemType_MapStrInt         ConfigItemType = 21
+	ConfigItemType_Thresholds        ConfigItemType = 30
+	ConfigItemType_Services          ConfigItemType = 31
+	ConfigItemType_NameInstances     ConfigItemType = 32
+	ConfigItemType_BlackboxTargets   ConfigItemType = 33
+	ConfigItemType_PrometheusTargets ConfigItemType = 34
+	ConfigItemType_SNMPTargets       ConfigItemType = 35
+	ConfigItemType_LogInputs         ConfigItemType = 36
+)
+
 type Status int
 
 const (
@@ -91,4 +122,15 @@ const (
 	Status_Warning  Status = 1
 	Status_Critical Status = 2
 	Status_Unknown  Status = 3
+)
+
+type TagType int
+
+const (
+	TagType_AutomaticAPI        TagType = 0
+	TagType_CreatedByGlouton    TagType = 1
+	TagType_CreatedByFrontend   TagType = 2
+	TagType_AutomaticGlouton    TagType = 3
+	TagType_AutomaticAPIService TagType = 4
+	TagType_NoType              TagType = 10
 )
