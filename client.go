@@ -249,7 +249,7 @@ func (c *Client) Do(
 
 	statusCode, respBody, err := c.doWithErrorHandling(ctx, req, authenticated)
 	if throttleErr := new(ThrottleError); errors.As(err, &throttleErr) {
-		if throttleErr.Delay < c.throttleMaxAutoRetryDelay {
+		if throttleErr.Delay <= c.throttleMaxAutoRetryDelay {
 			select {
 			case <-time.After(throttleErr.Delay):
 			case <-ctx.Done():
