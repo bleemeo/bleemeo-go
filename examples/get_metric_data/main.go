@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -54,9 +53,12 @@ func main() {
 		log.Panicln("Failed to unmarshal metric:", err)
 	}
 
-	resource := fmt.Sprintf("%s%s/data/", bleemeo.ResourceMetric, metricObj.ID)
+	reqURI, err := url.JoinPath(bleemeo.ResourceMetric, metricObj.ID, "data/")
+	if err != nil {
+		log.Panicln("Failed to create request URI:", err)
+	}
 
-	statusCode, resp, err := client.Do(context.Background(), http.MethodGet, resource, nil, true, nil)
+	statusCode, resp, err := client.Do(context.Background(), http.MethodGet, reqURI, nil, true, nil)
 	if err != nil {
 		log.Panicln("Failed to fetch metric data:", err)
 	}
