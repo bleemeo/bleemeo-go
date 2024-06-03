@@ -126,8 +126,8 @@ func WithNewOAuthTokenCallback(callback func(token *oauth2.Token)) ClientOption 
 	}
 }
 
-// WithThrottleMaxDelayAutoRetry defines the delay under which throttled requests are automatically resent.
-func WithThrottleMaxDelayAutoRetry(delay time.Duration) ClientOption {
+// WithThrottleMaxAutoRetryDelay defines the delay under which throttled requests are automatically resent.
+func WithThrottleMaxAutoRetryDelay(delay time.Duration) ClientOption {
 	return func(c *Client) {
 		c.throttleMaxAutoRetryDelay = delay
 	}

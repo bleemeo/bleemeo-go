@@ -78,4 +78,4 @@ func main() {
 | Initial refresh token         | `WithInitialOAuthRefreshToken(token)`  | `BLEEMEO_OAUTH_INITIAL_REFRESH_TOKEN`                     |
 | HTTP client                   | `WithHTTPClient(client)`               | -                                                         |
 | New OAuth token callback      | `WithNewOAuthTokenCallback(callback)`  | -                                                         |
-| Throttle max delay auto retry | `WithThrottleMaxDelayAutoRetry(delay)` | -                                                         |
+| Throttle max auto retry delay | `WithThrottleMaxAutoRetryDelay(delay)` | -                                                         |

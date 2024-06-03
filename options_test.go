@@ -210,7 +210,7 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:    "with throttle max auto retry delay",
-			options: []ClientOption{WithThrottleMaxDelayAutoRetry(20 * time.Second), creds},
+			options: []ClientOption{WithThrottleMaxAutoRetryDelay(20 * time.Second), creds},
 			expectedClient: Client{
 				username:                  "u",
 				endpoint:                  defaultEndpoint,

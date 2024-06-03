@@ -37,8 +37,6 @@ const (
 	defaultUserAgent     = "Bleemeo Go Client"
 	// If the throttle delay is less than this, automatically retry the requests.
 	defaultThrottleMaxAutoRetryDelay = time.Minute
-	minimalThrottle                  = 15 * time.Second
-	maximalThrottle                  = 10 * time.Minute
 )
 
 // Client is a helper to interact with the Bleemeo API,
@@ -57,9 +55,8 @@ type Client struct {
 	epURL        *url.URL
 	authProvider *authenticationProvider
 
-	l                   sync.Mutex
-	throttleConsecutive int
-	throttleDeadline    time.Time
+	l                sync.Mutex
+	throttleDeadline time.Time
 }
 
 // NewClient initializes a Bleemeo API client with the given options.
@@ -258,7 +255,7 @@ DoRequest:
 		}
 	}
 
-	if resp.StatusCode >= 400 { //nolint:nestif
+	if resp.StatusCode >= 400 {
 		bodyStart := readBodyStart(resp.Body)
 		apiErr := APIError{
 			ReqPath:     reqURI,
@@ -289,22 +286,11 @@ DoRequest:
 		case http.StatusNotFound:
 			apiErr.Err = fmt.Errorf("%w: %s", ErrResourceNotFound, reqURI)
 		case http.StatusTooManyRequests:
-			c.l.Lock()
-			c.throttleConsecutive++
-			delay := minimalThrottle + time.Duration(10*c.throttleConsecutive)*time.Second
-			c.l.Unlock()
+			delay := 30 * time.Second
 
 			delaySecond, err := strconv.Atoi(resp.Header.Get("Retry-After"))
 			if err == nil {
 				delay = time.Duration(delaySecond) * time.Second
-			}
-
-			if delay > maximalThrottle {
-				delay = maximalThrottle
-			}
-
-			if delay < minimalThrottle {
-				delay = minimalThrottle
 			}
 
 			if delay < c.throttleMaxAutoRetryDelay {
