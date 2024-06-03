@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"time"
 )
 
 const errorRespMaxLength = 1 << 20 // 1MB
@@ -118,6 +119,12 @@ func (authErr *AuthError) Error() string {
 
 func (authErr *AuthError) Unwrap() error {
 	return authErr.APIError
+}
+
+// A ThrottleError is returned when the API received too much requests from the client.
+type ThrottleError struct {
+	*APIError
+	Delay time.Duration
 }
 
 type jsonError struct {

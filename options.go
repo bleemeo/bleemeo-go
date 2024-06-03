@@ -19,6 +19,7 @@ package bleemeo
 import (
 	"net/http"
 	"os"
+	"time"
 
 	"golang.org/x/oauth2"
 )
@@ -122,5 +123,12 @@ func WithHTTPClient(client *http.Client) ClientOption {
 func WithNewOAuthTokenCallback(callback func(token *oauth2.Token)) ClientOption {
 	return func(c *Client) {
 		c.newOAuthTokenCallback = callback
+	}
+}
+
+// WithThrottleMaxDelayAutoRetry defines the delay under which throttled requests are automatically resent.
+func WithThrottleMaxDelayAutoRetry(delay time.Duration) ClientOption {
+	return func(c *Client) {
+		c.throttleMaxAutoRetryDelay = delay
 	}
 }

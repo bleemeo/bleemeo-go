@@ -25,6 +25,8 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"sync"
+	"time"
 
 	"golang.org/x/oauth2"
 )
@@ -33,22 +35,31 @@ const (
 	defaultEndpoint      = "https://api.bleemeo.com"
 	defaultOAuthClientID = "1fc6de3e-8750-472e-baea-3ba22bb4eb56"
 	defaultUserAgent     = "Bleemeo Go Client"
+	// If the throttle delay is less than this, automatically retry the requests.
+	defaultThrottleMaxAutoRetryDelay = time.Minute
+	minimalThrottle                  = 15 * time.Second
+	maximalThrottle                  = 10 * time.Minute
 )
 
 // Client is a helper to interact with the Bleemeo API,
 // providing methods to retrieve, list, create, update and delete resources.
 type Client struct {
-	username, password    string
-	endpoint              string
-	oAuthClientID         string
-	oAuthClientSecret     string
-	oAuthInitialRefresh   string
-	client                *http.Client
-	newOAuthTokenCallback func(token *oauth2.Token)
-	headers               map[string]string
+	username, password        string
+	endpoint                  string
+	oAuthClientID             string
+	oAuthClientSecret         string
+	oAuthInitialRefresh       string
+	client                    *http.Client
+	newOAuthTokenCallback     func(token *oauth2.Token)
+	headers                   map[string]string
+	throttleMaxAutoRetryDelay time.Duration
 
 	epURL        *url.URL
 	authProvider *authenticationProvider
+
+	l                   sync.Mutex
+	throttleConsecutive int
+	throttleDeadline    time.Time
 }
 
 // NewClient initializes a Bleemeo API client with the given options.
@@ -61,10 +72,11 @@ type Client struct {
 // to authenticate against the Bleemeo API.
 func NewClient(opts ...ClientOption) (*Client, error) {
 	c := &Client{
-		endpoint:      defaultEndpoint,
-		oAuthClientID: defaultOAuthClientID,
-		client:        new(http.Client),
-		headers:       map[string]string{"User-Agent": defaultUserAgent},
+		endpoint:                  defaultEndpoint,
+		oAuthClientID:             defaultOAuthClientID,
+		client:                    new(http.Client),
+		headers:                   map[string]string{"User-Agent": defaultUserAgent},
+		throttleMaxAutoRetryDelay: defaultThrottleMaxAutoRetryDelay,
 	}
 
 	for _, opt := range opts {
@@ -92,6 +104,14 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	}
 
 	return c, nil
+}
+
+// ThrottleDeadline return the time request should be retried.
+func (c *Client) ThrottleDeadline() time.Time {
+	c.l.Lock()
+	defer c.l.Unlock()
+
+	return c.throttleDeadline
 }
 
 // GetToken returns the current OAuth token used by the client,
@@ -203,13 +223,26 @@ func (c *Client) Delete(ctx context.Context, resource Resource, id string) error
 func (c *Client) Do(
 	ctx context.Context, method, reqURI string, params url.Values, authenticated bool, body io.Reader,
 ) (int, []byte, error) {
+	if delay := time.Until(c.throttleDeadline); delay > 0 {
+		return 0, nil, &ThrottleError{
+			APIError: &APIError{
+				ReqPath:    reqURI,
+				StatusCode: http.StatusTooManyRequests,
+				Message:    fmt.Sprintf("Too many requests, need to wait for %s", delay),
+			},
+			Delay: delay,
+		}
+	}
+
 	req, err := c.ParseRequest(method, reqURI, nil, params, body)
 	if err != nil {
 		return 0, nil, err
 	}
 
+DoRequest:
+
 	resp, err := c.DoRequest(ctx, req, authenticated)
-	if err != nil {
+	if err != nil { //nolint:wsl
 		return 0, nil, fmt.Errorf("request execution failed: %w", err)
 	}
 
@@ -225,7 +258,7 @@ func (c *Client) Do(
 		}
 	}
 
-	if resp.StatusCode >= 400 {
+	if resp.StatusCode >= 400 { //nolint:nestif
 		bodyStart := readBodyStart(resp.Body)
 		apiErr := APIError{
 			ReqPath:     reqURI,
@@ -235,8 +268,8 @@ func (c *Client) Do(
 			Response:    bodyStart,
 		}
 
-		switch {
-		case resp.StatusCode == http.StatusBadRequest:
+		switch resp.StatusCode {
+		case http.StatusBadRequest:
 			var respBody map[string][]string
 
 			err = json.Unmarshal(bodyStart, &respBody)
@@ -251,10 +284,53 @@ func (c *Client) Do(
 			} else {
 				apiErr.Message = "Bad request:" + makeBadRequestMessage(respBody)
 			}
-		case resp.StatusCode == http.StatusUnauthorized:
+		case http.StatusUnauthorized:
 			return resp.StatusCode, nil, buildAuthErrorFromBody(&apiErr)
-		case resp.StatusCode == http.StatusNotFound:
+		case http.StatusNotFound:
 			apiErr.Err = fmt.Errorf("%w: %s", ErrResourceNotFound, reqURI)
+		case http.StatusTooManyRequests:
+			c.l.Lock()
+			c.throttleConsecutive++
+			delay := minimalThrottle + time.Duration(10*c.throttleConsecutive)*time.Second
+			c.l.Unlock()
+
+			delaySecond, err := strconv.Atoi(resp.Header.Get("Retry-After"))
+			if err == nil {
+				delay = time.Duration(delaySecond) * time.Second
+			}
+
+			if delay > maximalThrottle {
+				delay = maximalThrottle
+			}
+
+			if delay < minimalThrottle {
+				delay = minimalThrottle
+			}
+
+			if delay < c.throttleMaxAutoRetryDelay {
+				select {
+				case <-time.After(delay):
+				case <-ctx.Done():
+					return resp.StatusCode, nil, ctx.Err() //nolint:wrapcheck
+				}
+
+				req = req.Clone(ctx)
+
+				cleanupResponse(resp)
+
+				goto DoRequest
+			}
+
+			c.l.Lock()
+			c.throttleDeadline = time.Now().Add(delay)
+			c.l.Unlock()
+
+			apiErr.Message = fmt.Sprintf("Too many requests, need to wait for %s", delay)
+
+			return resp.StatusCode, nil, &ThrottleError{
+				APIError: &apiErr,
+				Delay:    delay,
+			}
 		}
 
 		return resp.StatusCode, nil, &apiErr

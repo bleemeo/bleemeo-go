@@ -44,7 +44,7 @@ func main() {
 		}
 	}()
 
-	metric, err := client.Get(context.Background(), bleemeo.ResourceMetric, "<the metric UUID>", bleemeo.DefaultFields)
+	metric, err := client.Get(context.Background(), bleemeo.ResourceMetric, "<the metric UUID>")
 	if err != nil {
 		log.Fatalln("Failed to retrieve metric:", err)
 	}
@@ -69,12 +69,13 @@ func main() {
 
 **For environment variables to be taken into account, the option `WithConfigurationFromEnv()` must be provided.**
 
-| Property                 | Option function                       | Env variable(s)                                           |
-|--------------------------|---------------------------------------|-----------------------------------------------------------|
-| Credentials              | `WithCredentials(username, password)` | `BLEEMEO_USER` & `BLEEMEO_PASSWORD`                       |
-| Bleemeo account header   | `WithBleemeoAccountHeader(accountID)` | `BLEEMEO_ACCOUNT_ID`                                      |
-| OAuth client ID/secret   | `WithOAuthClient(id, secret)`         | `BLEEMEO_OAUTH_CLIENT_ID` & `BLEEMEO_OAUTH_CLIENT_SECRET` |
-| Endpoint URL             | `WithEndpoint(endpoint)`              | `BLEEMEO_API_URL`                                         |
-| Initial refresh token    | `WithInitialOAuthRefreshToken(token)` | `BLEEMEO_OAUTH_INITIAL_REFRESH_TOKEN`                     |
-| HTTP client              | `WithHTTPClient(client)`              | -                                                         |
-| New OAuth token callback | `WithNewOAuthTokenCallback(callback)` | -                                                         |
+| Property                      | Option function                        | Env variable(s)                                           |
+|-------------------------------|----------------------------------------|-----------------------------------------------------------|
+| Credentials                   | `WithCredentials(username, password)`  | `BLEEMEO_USER` & `BLEEMEO_PASSWORD`                       |
+| Bleemeo account header        | `WithBleemeoAccountHeader(accountID)`  | `BLEEMEO_ACCOUNT_ID`                                      |
+| OAuth client ID/secret        | `WithOAuthClient(id, secret)`          | `BLEEMEO_OAUTH_CLIENT_ID` & `BLEEMEO_OAUTH_CLIENT_SECRET` |
+| Endpoint URL                  | `WithEndpoint(endpoint)`               | `BLEEMEO_API_URL`                                         |
+| Initial refresh token         | `WithInitialOAuthRefreshToken(token)`  | `BLEEMEO_OAUTH_INITIAL_REFRESH_TOKEN`                     |
+| HTTP client                   | `WithHTTPClient(client)`               | -                                                         |
+| New OAuth token callback      | `WithNewOAuthTokenCallback(callback)`  | -                                                         |
+| Throttle max delay auto retry | `WithThrottleMaxDelayAutoRetry(delay)` | -                                                         |
