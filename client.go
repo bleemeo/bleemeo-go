@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -124,7 +125,10 @@ func (c *Client) Logout(ctx context.Context) error {
 
 // Get the resource with the given id, with only the given fields, if not nil.
 func (c *Client) Get(ctx context.Context, resource Resource, id string, fields ...string) (json.RawMessage, error) {
-	reqURI := fmt.Sprintf("%s%s/", resource, id)
+	reqURI, err := url.JoinPath(resource, id, "/")
+	if err != nil {
+		return nil, err //nolint:wrapcheck
+	}
 
 	return unmarshalResponse(c.Do(ctx, http.MethodGet, reqURI, paramsFromFields(fields), true, nil))
 }
@@ -200,15 +204,22 @@ func (c *Client) Update(
 		return nil, err
 	}
 
-	reqURI := fmt.Sprintf("%s%s/", resource, id)
+	reqURI, err := url.JoinPath(resource, id, "/")
+	if err != nil {
+		return nil, err //nolint:wrapcheck
+	}
 
 	return unmarshalResponse(c.Do(ctx, http.MethodPatch, reqURI, paramsFromFields(fields), true, bodyReader))
 }
 
 // Delete the resource with the given id.
 func (c *Client) Delete(ctx context.Context, resource Resource, id string) error {
-	reqURI := fmt.Sprintf("%s%s/", resource, id)
-	_, _, err := c.Do(ctx, http.MethodDelete, reqURI, nil, true, nil)
+	reqURI, err := url.JoinPath(resource, id, "/")
+	if err != nil {
+		return err //nolint: wrapcheck
+	}
+
+	_, _, err = c.Do(ctx, http.MethodDelete, reqURI, nil, true, nil)
 
 	return err
 }
@@ -236,110 +247,20 @@ func (c *Client) Do(
 		return 0, nil, err
 	}
 
-DoRequest:
+	statusCode, respBody, err := c.doWithErrorHandling(ctx, req, authenticated)
+	if throttleErr := new(ThrottleError); errors.As(err, &throttleErr) {
+		if throttleErr.Delay < c.throttleMaxAutoRetryDelay {
+			select {
+			case <-time.After(throttleErr.Delay):
+			case <-ctx.Done():
+				return statusCode, nil, ctx.Err() //nolint:wrapcheck
+			}
 
-	resp, err := c.DoRequest(ctx, req, authenticated)
-	if err != nil { //nolint:wsl
-		return 0, nil, fmt.Errorf("request execution failed: %w", err)
-	}
-
-	defer cleanupResponse(resp)
-
-	if resp.StatusCode >= 500 {
-		return resp.StatusCode, nil, &APIError{
-			ReqPath:     reqURI,
-			StatusCode:  resp.StatusCode,
-			ContentType: resp.Header.Get("Content-Type"),
-			Message:     resp.Status,
-			Response:    readBodyStart(resp.Body),
+			statusCode, respBody, err = c.doWithErrorHandling(ctx, req.Clone(ctx), authenticated)
 		}
 	}
 
-	if resp.StatusCode >= 400 {
-		bodyStart := readBodyStart(resp.Body)
-		apiErr := APIError{
-			ReqPath:     reqURI,
-			StatusCode:  resp.StatusCode,
-			ContentType: resp.Header.Get("Content-Type"),
-			Message:     resp.Status,
-			Response:    bodyStart,
-		}
-
-		switch resp.StatusCode {
-		case http.StatusBadRequest:
-			var respBody map[string][]string
-
-			err = json.Unmarshal(bodyStart, &respBody)
-			if err != nil {
-				apiErr.Err = &JSONUnmarshalError{
-					&jsonError{
-						Err:      err,
-						DataKind: JsonErrorDataKind_400Details,
-						Data:     bodyStart,
-					},
-				}
-			} else {
-				apiErr.Message = "Bad request:" + makeBadRequestMessage(respBody)
-			}
-		case http.StatusUnauthorized:
-			return resp.StatusCode, nil, buildAuthErrorFromBody(&apiErr)
-		case http.StatusNotFound:
-			apiErr.Err = fmt.Errorf("%w: %s", ErrResourceNotFound, reqURI)
-		case http.StatusTooManyRequests:
-			delay := 30 * time.Second
-
-			delaySecond, err := strconv.Atoi(resp.Header.Get("Retry-After"))
-			if err == nil {
-				delay = time.Duration(delaySecond) * time.Second
-			}
-
-			if delay < c.throttleMaxAutoRetryDelay {
-				select {
-				case <-time.After(delay):
-				case <-ctx.Done():
-					return resp.StatusCode, nil, ctx.Err() //nolint:wrapcheck
-				}
-
-				req = req.Clone(ctx)
-
-				cleanupResponse(resp)
-
-				goto DoRequest
-			}
-
-			c.l.Lock()
-			c.throttleDeadline = time.Now().Add(delay)
-			c.l.Unlock()
-
-			apiErr.Message = fmt.Sprintf("Too many requests, need to wait for %s", delay)
-
-			return resp.StatusCode, nil, &ThrottleError{
-				APIError: &apiErr,
-				Delay:    delay,
-			}
-		}
-
-		return resp.StatusCode, nil, &apiErr
-	}
-
-	respBuf := new(bytes.Buffer)
-	if resp.ContentLength > 0 {
-		respBuf.Grow(int(resp.ContentLength))
-	}
-
-	_, err = respBuf.ReadFrom(resp.Body)
-	if err != nil {
-		return resp.StatusCode, nil, &APIError{
-			ReqPath:     reqURI,
-			StatusCode:  resp.StatusCode,
-			ContentType: resp.Header.Get("Content-Type"),
-			Message:     "failed to read response body",
-			Err:         err,
-			Response:    nil,
-		}
-	}
-
-	return resp.StatusCode, respBuf.Bytes(), nil
+	return statusCode, respBody, err
 }
 
 // DoRequest sends the given request and returns the response or any error.
@@ -409,6 +330,97 @@ func (c *Client) ParseRequest(
 	}
 
 	return req, nil
+}
+
+func (c *Client) doWithErrorHandling(ctx context.Context, req *http.Request, authenticated bool) (int, []byte, error) {
+	resp, err := c.DoRequest(ctx, req, authenticated)
+	if err != nil {
+		return 0, nil, fmt.Errorf("request execution failed: %w", err)
+	}
+
+	defer cleanupResponse(resp)
+
+	if resp.StatusCode >= 500 {
+		return resp.StatusCode, nil, &APIError{
+			ReqPath:     req.URL.Path,
+			StatusCode:  resp.StatusCode,
+			ContentType: resp.Header.Get("Content-Type"),
+			Message:     resp.Status,
+			Response:    readBodyStart(resp.Body),
+		}
+	}
+
+	if resp.StatusCode >= 400 {
+		bodyStart := readBodyStart(resp.Body)
+		apiErr := APIError{
+			ReqPath:     req.URL.Path,
+			StatusCode:  resp.StatusCode,
+			ContentType: resp.Header.Get("Content-Type"),
+			Message:     resp.Status,
+			Response:    bodyStart,
+		}
+
+		switch resp.StatusCode {
+		case http.StatusBadRequest:
+			var respBody map[string][]string
+
+			err = json.Unmarshal(bodyStart, &respBody)
+			if err != nil {
+				apiErr.Err = &JSONUnmarshalError{
+					&jsonError{
+						Err:      err,
+						DataKind: JsonErrorDataKind_400Details,
+						Data:     bodyStart,
+					},
+				}
+			} else {
+				apiErr.Message = "Bad request:" + makeBadRequestMessage(respBody)
+			}
+		case http.StatusUnauthorized:
+			return resp.StatusCode, nil, buildAuthErrorFromBody(&apiErr)
+		case http.StatusNotFound:
+			apiErr.Err = fmt.Errorf("%w: %s", ErrResourceNotFound, req.URL.Path)
+		case http.StatusTooManyRequests:
+			delay := 30 * time.Second
+
+			delaySecond, err := strconv.Atoi(resp.Header.Get("Retry-After"))
+			if err == nil {
+				delay = time.Duration(delaySecond) * time.Second
+			}
+
+			c.l.Lock()
+			c.throttleDeadline = time.Now().Add(delay)
+			c.l.Unlock()
+
+			apiErr.Message = fmt.Sprintf("Too many requests, need to wait for %s", delay)
+
+			return resp.StatusCode, nil, &ThrottleError{
+				APIError: &apiErr,
+				Delay:    delay,
+			}
+		}
+
+		return resp.StatusCode, nil, &apiErr
+	}
+
+	respBuf := new(bytes.Buffer)
+	if resp.ContentLength > 0 {
+		respBuf.Grow(int(resp.ContentLength))
+	}
+
+	_, err = respBuf.ReadFrom(resp.Body)
+	if err != nil {
+		return resp.StatusCode, nil, &APIError{
+			ReqPath:     req.URL.Path,
+			StatusCode:  resp.StatusCode,
+			ContentType: resp.Header.Get("Content-Type"),
+			Message:     "failed to read response body",
+			Err:         err,
+			Response:    nil,
+		}
+	}
+
+	return resp.StatusCode, respBuf.Bytes(), nil
 }
 
 func (c *Client) do(ctx context.Context, req *http.Request, authenticated bool) (*http.Response, error) {

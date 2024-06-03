@@ -68,7 +68,7 @@ func TestOptions(t *testing.T) {
 		env            map[string]string
 		options        []ClientOption
 		expectedError  error
-		expectedClient Client
+		expectedClient *Client
 	}{
 		{
 			name:          "no options",
@@ -77,7 +77,7 @@ func TestOptions(t *testing.T) {
 		{
 			name:    "no (optional) options",
 			options: []ClientOption{creds},
-			expectedClient: Client{
+			expectedClient: &Client{
 				username:                  "u",
 				endpoint:                  defaultEndpoint,
 				oAuthClientID:             defaultOAuthClientID,
@@ -90,7 +90,7 @@ func TestOptions(t *testing.T) {
 		{
 			name:    "with credentials",
 			options: []ClientOption{WithCredentials("usr", "pwd")},
-			expectedClient: Client{
+			expectedClient: &Client{
 				username:                  "usr",
 				password:                  "pwd",
 				endpoint:                  defaultEndpoint,
@@ -104,7 +104,7 @@ func TestOptions(t *testing.T) {
 		{
 			name:    "with endpoint",
 			options: []ClientOption{WithEndpoint("http://my-proxy.internal"), creds},
-			expectedClient: Client{
+			expectedClient: &Client{
 				username:                  "u",
 				endpoint:                  "http://my-proxy.internal",
 				oAuthClientID:             defaultOAuthClientID,
@@ -126,7 +126,7 @@ func TestOptions(t *testing.T) {
 		{
 			name:    "with OAuth client ID",
 			options: []ClientOption{WithOAuthClient("123456789", "53CR37"), creds},
-			expectedClient: Client{
+			expectedClient: &Client{
 				username:                  "u",
 				endpoint:                  defaultEndpoint,
 				oAuthClientID:             "123456789",
@@ -140,7 +140,7 @@ func TestOptions(t *testing.T) {
 		{
 			name:    "with Bleemeo account header",
 			options: []ClientOption{WithBleemeoAccountHeader("eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3"), creds},
-			expectedClient: Client{
+			expectedClient: &Client{
 				username:      "u",
 				endpoint:      defaultEndpoint,
 				oAuthClientID: defaultOAuthClientID,
@@ -156,7 +156,7 @@ func TestOptions(t *testing.T) {
 		{
 			name:    "with initial OAuth refresh token",
 			options: []ClientOption{WithInitialOAuthRefreshToken("initial")},
-			expectedClient: Client{
+			expectedClient: &Client{
 				endpoint:                  defaultEndpoint,
 				oAuthClientID:             defaultOAuthClientID,
 				oAuthInitialRefresh:       "initial",
@@ -178,7 +178,7 @@ func TestOptions(t *testing.T) {
 				"BLEEMEO_OAUTH_INITIAL_REFRESH_TOKEN": "refresh-token",
 			},
 			options: []ClientOption{WithConfigurationFromEnv()},
-			expectedClient: Client{
+			expectedClient: &Client{
 				username:            "u",
 				password:            "p",
 				endpoint:            "http://my-proxy.internal",
@@ -197,7 +197,7 @@ func TestOptions(t *testing.T) {
 		{
 			name:    "with new oAuth token callback",
 			options: []ClientOption{WithNewOAuthTokenCallback(newOAuthTkCb), creds},
-			expectedClient: Client{
+			expectedClient: &Client{
 				username:                  "u",
 				endpoint:                  defaultEndpoint,
 				oAuthClientID:             defaultOAuthClientID,
@@ -211,7 +211,7 @@ func TestOptions(t *testing.T) {
 		{
 			name:    "with throttle max auto retry delay",
 			options: []ClientOption{WithThrottleMaxAutoRetryDelay(20 * time.Second), creds},
-			expectedClient: Client{
+			expectedClient: &Client{
 				username:                  "u",
 				endpoint:                  defaultEndpoint,
 				oAuthClientID:             defaultOAuthClientID,
@@ -224,8 +224,8 @@ func TestOptions(t *testing.T) {
 		// We can assume that WithHTTPClient() works since it is used in all the above cases.
 	}
 
-	for _, testCase := range cases { //nolint:govet // the client won't run, so copying the lock doesn't matter
-		tc := testCase //nolint:govet
+	for _, testCase := range cases {
+		tc := testCase
 
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -251,7 +251,7 @@ func TestOptions(t *testing.T) {
 				cmpopts.IgnoreFields(Client{}, "authProvider", "l"),
 				cmp.Comparer(tokenCallbackComparer),
 			}
-			if diff := cmp.Diff(&tc.expectedClient, client, cmpOpts); diff != "" {
+			if diff := cmp.Diff(tc.expectedClient, client, cmpOpts); diff != "" {
 				t.Fatalf("Unexpected client: (-want +got)\n%s", diff)
 			}
 		})
