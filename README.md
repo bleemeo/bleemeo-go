@@ -4,7 +4,7 @@
 
 ## Requirements
 
-- Go1.18 or later
+- Go1.19 or later
 - An account on [Bleemeo](https://bleemeo.com/)
 
 ### Environment
