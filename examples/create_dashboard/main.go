@@ -8,7 +8,8 @@ import (
 	"github.com/bleemeo/bleemeo-go"
 )
 
-// Creating a dashboard and a widget.
+// Creating a dashboard named "My dashboard",
+// and inside a text widget with the content "My widget".
 func main() {
 	client, err := bleemeo.NewClient(
 		bleemeo.WithConfigurationFromEnv(),

@@ -9,7 +9,8 @@ import (
 	"github.com/bleemeo/bleemeo-go"
 )
 
-// Updating the content of a widget.
+// Finding a widget by its name ("My widget"),
+// then updating its title/content to "This is my widget".
 func main() {
 	client, err := bleemeo.NewClient(
 		bleemeo.WithConfigurationFromEnv(),
@@ -42,10 +43,8 @@ func main() {
 	}
 
 	var widgetObj struct {
-		ID          string        `json:"id"`
-		Title       string        `json:"title"`
-		Graph       bleemeo.Graph `json:"graph"`
-		DashboardID string        `json:"dashboard"`
+		ID          string `json:"id"`
+		DashboardID string `json:"dashboard"`
 	}
 
 	err = json.Unmarshal(resultPage.Results[0], &widgetObj)
@@ -58,6 +57,7 @@ func main() {
 		bleemeo.ResourceWidget,
 		widgetObj.ID,
 		map[string]any{"title": "This is my widget"},
+		"id", "dashboard",
 	)
 	if err != nil {
 		log.Panicln("Failed to update widget:", err)

@@ -66,7 +66,7 @@ type Client struct {
 //
 // See the README (https://github.com/bleemeo/bleemeo-go/#configuration) for all available options.
 //
-// It will take care of obtaining and refreshing the OAuth token
+// The Client will take care of obtaining and refreshing the OAuth token
 // to authenticate against the Bleemeo API.
 func NewClient(opts ...ClientOption) (*Client, error) {
 	c := &Client{

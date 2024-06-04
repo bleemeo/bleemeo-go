@@ -52,6 +52,8 @@ linters-settings:
 
 issues:
   exclude-dirs-use-default: false # Exclusion of the 'examples' dir may be the cause of ignoring all issues.
+  exclude-files:
+    - doc.go # Ain't no code in here
   exclude-rules:
     # False positive: https://github.com/kunwardeep/paralleltest/issues/8.
     - linters:

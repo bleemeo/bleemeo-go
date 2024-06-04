@@ -39,7 +39,7 @@ func main() {
 	for iter.Next(context.Background()) {
 		var metricObj metricType
 
-		err := json.Unmarshal(iter.At(), &metricObj)
+		err = json.Unmarshal(iter.At(), &metricObj)
 		if err != nil {
 			log.Panicln("Failed to unmarshal metric:", err)
 		}

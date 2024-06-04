@@ -47,6 +47,7 @@ func JSONReaderFrom(body any) (io.Reader, error) {
 	return bytes.NewReader(data), nil
 }
 
+// paramsFromFields builds some [url.Values] from the given fields.
 func paramsFromFields(fields []string) url.Values {
 	if len(fields) == 0 {
 		return nil
@@ -57,9 +58,9 @@ func paramsFromFields(fields []string) url.Values {
 	}
 }
 
+// cleanupResponse ensures we read the whole response to avoid "Connection reset by peer"
+// on server, and ensures that the HTTP connection can be reused.
 func cleanupResponse(resp *http.Response) {
-	// Ensure we read the whole response to avoid "Connection reset by peer" on server
-	// and ensure HTTP connection can be reused
 	_, _ = io.Copy(io.Discard, resp.Body)
 	_ = resp.Body.Close()
 }
