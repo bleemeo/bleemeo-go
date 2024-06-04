@@ -49,7 +49,7 @@ func JSONReaderFrom(body any) (io.Reader, error) {
 
 // paramsFromFields builds some [url.Values] from the given fields.
 func paramsFromFields(fields []string) url.Values {
-	if len(fields) == 0 {
+	if len(fields) == 0 || len(fields) == 1 && fields[0] == "" {
 		return nil
 	}
 
