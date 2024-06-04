@@ -36,7 +36,9 @@ func authMockHandler(*http.Request) (int, []byte, error) {
 	), nil
 }
 
-func makeMetricMockHandler(availableResources int) mockHandler {
+func makeMetricMockHandler(t *testing.T, availableResources int) mockHandler {
+	t.Helper()
+
 	makeResults := func(page, pageSize int) []json.RawMessage {
 		results := make([]json.RawMessage, pageSize)
 
@@ -49,7 +51,7 @@ func makeMetricMockHandler(availableResources int) mockHandler {
 
 	return func(r *http.Request) (statusCode int, body []byte, err error) {
 		currentPage := 1
-		pageSize := 5
+		pageSize := 0
 
 		q := r.URL.Query()
 		if q.Has("page") {
@@ -64,6 +66,8 @@ func makeMetricMockHandler(availableResources int) mockHandler {
 			if err != nil {
 				return 0, nil, fmt.Errorf("cannot parse page size %q: %w", q.Get("page_size"), err)
 			}
+		} else {
+			t.Fatal("No page size provided (the default one should be present at least)")
 		}
 
 		result := ResultsPage{
@@ -76,7 +80,7 @@ func makeMetricMockHandler(availableResources int) mockHandler {
 				result.Results = makeResults(currentPage, pageSize)
 
 				if currentPage < availablePages {
-					result.Next = fmt.Sprintf("%s/v1/metric/?page=%d", defaultEndpoint, currentPage+1)
+					result.Next = fmt.Sprintf("%s/v1/metric/?page=%d&page_size=%d", defaultEndpoint, currentPage+1, pageSize)
 				}
 			}
 		}
@@ -123,10 +127,10 @@ func TestIterator(t *testing.T) {
 	t.Run("normal iteration", func(t *testing.T) {
 		t.Parallel()
 
-		const totalResources = 15 // the default page size is 5
+		const totalResources = 15 // the page size is set to 5
 
-		client, requestCounter := makeClientMockForIteration(t, makeMetricMockHandler(totalResources))
-		iter := client.Iterator(ResourceMetric, url.Values{})
+		client, requestCounter := makeClientMockForIteration(t, makeMetricMockHandler(t, totalResources))
+		iter := client.Iterator(ResourceMetric, url.Values{"page_size": {"5"}})
 		objectsCount := 0
 
 		type retObject struct {
@@ -169,7 +173,7 @@ func TestIterator(t *testing.T) {
 		t.Parallel()
 
 		client, requestCounter := makeClientMockForIteration(
-			t, makeMetricMockHandler(0),
+			t, makeMetricMockHandler(t, 0),
 			WithInitialOAuthRefreshToken("refresh"),
 		)
 		iter := client.Iterator(ResourceMetric, url.Values{})

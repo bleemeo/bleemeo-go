@@ -62,6 +62,16 @@ Calling Iterator.At() returns the resource at the current cursor position,
 but must only be done if Iterator.Next() has been called just before and returned true.
 Iterator.Err() returns the error that occurred during the iteration, if any.
 
+	iter := client.Iterator(...)
+	for iter.Next() {
+	   value := iter.At()
+	   // process value
+	}
+
+	if iter.Err() != nil {
+	   // process error
+	}
+
 # Resources
 
 A Resource represents a datatype on the Bleemeo API, and can be used as a route to access it.

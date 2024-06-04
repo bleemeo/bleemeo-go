@@ -23,6 +23,8 @@ import (
 	"net/url"
 )
 
+const defaultIteratorPageSize = "2500"
+
 // An Iterator allows browsing all the resources of a specific kind,
 // optionally matching specified parameters,
 // and automatically fetching the next page when needed.
@@ -39,6 +41,14 @@ type Iterator interface {
 }
 
 func newIterator(c *Client, resource Resource, params url.Values) *iterator {
+	if !params.Has("page_size") {
+		if params == nil {
+			params = url.Values{"page_size": {defaultIteratorPageSize}}
+		} else {
+			params.Set("page_size", defaultIteratorPageSize)
+		}
+	}
+
 	return &iterator{
 		c:        c,
 		resource: resource,

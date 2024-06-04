@@ -176,6 +176,7 @@ func (c *Client) Count(ctx context.Context, resource Resource, params url.Values
 }
 
 // Iterator returns all resources that match given params.
+// The page size is set to 2500 by default, but can be defined by setting `page_size` in params.
 func (c *Client) Iterator(resource Resource, params url.Values) Iterator {
 	return newIterator(c, resource, params)
 }
