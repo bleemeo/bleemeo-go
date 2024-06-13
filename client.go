@@ -94,7 +94,7 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 
 	c.epURL = epURL
 	c.authProvider = newAuthenticationProvider(
-		c.endpoint, c.username, c.password, c.oAuthInitialRefresh, c.oAuthClientID, c.oAuthClientSecret, c.client,
+		c.epURL, c.username, c.password, c.oAuthInitialRefresh, c.oAuthClientID, c.oAuthClientSecret, c.client,
 	)
 
 	if c.newOAuthTokenCallback != nil {

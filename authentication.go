@@ -64,12 +64,12 @@ func wrapTransportWithUserAgent(client *http.Client, userAgentHeader string) *ht
 	return &c
 }
 
-func newRefresher(endpointURL, clientID, clientSecret string, client *http.Client) tokenRefresher {
+func newRefresher(endpointURL *url.URL, clientID, clientSecret string, client *http.Client) tokenRefresher {
 	cfg := oauth2.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		Endpoint: oauth2.Endpoint{
-			TokenURL:  endpointURL + tokenPath,
+			TokenURL:  endpointURL.JoinPath(tokenPath).String(),
 			AuthStyle: oauth2.AuthStyleInParams,
 		},
 	}
@@ -98,7 +98,7 @@ type authenticationProvider struct {
 }
 
 func newAuthenticationProvider(
-	endpointURL, username, password, initialRefreshToken, clientID, clientSecret string, client *http.Client,
+	endpointURL *url.URL, username, password, initialRefreshToken, clientID, clientSecret string, client *http.Client,
 ) *authenticationProvider {
 	client = wrapTransportWithUserAgent(client, defaultUserAgent)
 	authProvider := authenticationProvider{
@@ -127,12 +127,12 @@ func newAuthenticationProvider(
 // newCredentialsAuthProvider makes a new token source based on the given credentials.
 // New tokens will be fetched with the "password" grant type.
 func credentialsTokenProvider(
-	endpointURL, username, password, clientID, clientSecret string, client *http.Client,
+	endpointURL *url.URL, username, password, clientID, clientSecret string, client *http.Client,
 ) tokenProvider {
 	cfg := clientcredentials.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
-		TokenURL:     endpointURL + tokenPath,
+		TokenURL:     endpointURL.JoinPath(tokenPath).String(),
 		EndpointParams: url.Values{
 			"grant_type": {"password"},
 			"username":   {username},

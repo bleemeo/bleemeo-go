@@ -100,10 +100,17 @@ func (iter *iterator) fetchPage(ctx context.Context) (ok bool) {
 	var (
 		reqURI string
 		params url.Values
+		err    error
 	)
 
 	if iter.currentPage == nil { // first fetch
-		reqURI = "/" + iter.resource
+		reqURI, err = url.JoinPath("/", iter.resource)
+		if err != nil {
+			iter.err = err
+
+			return false
+		}
+
 		params = iter.params
 	} else {
 		if iter.currentPage.Next == "" {
