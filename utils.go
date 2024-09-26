@@ -83,7 +83,7 @@ func unmarshalResponse(_ int, respBody []byte, err error) (json.RawMessage, erro
 			jsonError: &jsonError{
 				Err:      err,
 				DataKind: JsonErrorDataKind_RequestBody,
-				Data:     respBody[:min(len(respBody), errorRespMaxLength)],
+				Data:     respBody[:minInt(len(respBody), errorRespMaxLength)],
 			},
 		}
 	}
@@ -91,7 +91,7 @@ func unmarshalResponse(_ int, respBody []byte, err error) (json.RawMessage, erro
 	return raw, nil
 }
 
-func min(x, y int) int {
+func minInt(x, y int) int {
 	if x < y {
 		return x
 	}

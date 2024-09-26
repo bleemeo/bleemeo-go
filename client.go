@@ -274,7 +274,7 @@ func (c *Client) DoRequest(ctx context.Context, req *http.Request, authenticated
 		return nil, err
 	}
 
-	if resp.StatusCode == 401 && authenticated {
+	if resp.StatusCode == http.StatusUnauthorized && authenticated {
 		cleanupResponse(resp)
 
 		err = c.authProvider.refetchToken(ctx)
