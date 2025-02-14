@@ -1,4 +1,4 @@
-// Copyright 2015-2024 Bleemeo
+// Copyright 2015-2025 Bleemeo
 //
 // bleemeo.com an infrastructure monitoring solution in the Cloud
 //
@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//nolint: revive,stylecheck,gofmt,gofumpt,goimports
+// nolint: revive,stylecheck,gofmt,gofumpt,goimports
 package bleemeo
 
 type AgentType string

@@ -1,4 +1,4 @@
-// Copyright 2015-2024 Bleemeo
+// Copyright 2015-2025 Bleemeo
 //
 // bleemeo.com an infrastructure monitoring solution in the Cloud
 //
@@ -42,7 +42,7 @@ var (
 // JSONErrorDataKind indicates the type of data whose conversion failed.
 type JSONErrorDataKind int
 
-//nolint: revive,stylecheck,gofmt,gofumpt,goimports
+// nolint: revive,stylecheck,gofmt,gofumpt,goimports
 const (
 	JsonErrorDataKind_400Details JSONErrorDataKind = iota
 	JsonErrorDataKind_401Details
