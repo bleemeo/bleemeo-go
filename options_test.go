@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -56,8 +55,6 @@ func mustParseURL(t *testing.T, s string) *url.URL {
 }
 
 func TestOptions(t *testing.T) {
-	t.Parallel()
-
 	creds := WithCredentials("u", "")
 	oauthMockClient := &http.Client{Transport: oauthMockTransport{}}
 	defaultEndpointURL := mustParseURL(t, defaultEndpoint)
@@ -228,13 +225,8 @@ func TestOptions(t *testing.T) {
 		tc := testCase
 
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
 			for k, v := range tc.env {
-				err := os.Setenv(k, v)
-				if err != nil {
-					t.Fatal("Failed to define environment:", err)
-				}
+				t.Setenv(k, v)
 			}
 
 			client, err := NewClient(append(tc.options, WithHTTPClient(oauthMockClient))...)

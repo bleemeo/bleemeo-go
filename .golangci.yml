@@ -7,8 +7,7 @@ linters:
   disable:
     # Base linters disabled for all projects.
     - funlen
-    - gomnd  # Too picky. For example it says that 1000 (used in number of ms in one second) is a magic number.
-    - mnd # Same as above.
+    - mnd  # Too picky. For example it says that 1000 (used in number of ms in one second) is a magic number.
     - exhaustruct # Same as above.
     - gci # Conflicts with gofumpt.
     - varnamelen # I think there is too many false-positive.
@@ -16,8 +15,7 @@ linters:
     - nonamedreturns # Warn for every named return, not useful.
     - interfacebloat # Warn when an interface has too many methods, not useful.
     # Deprecated and replaced linter.
-    - execinquery
-    - exportloopref
+    - tenv
     # We use maintidx to lint function complexity.
     - gocyclo
     - cyclop
