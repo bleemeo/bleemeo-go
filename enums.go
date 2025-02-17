@@ -1,4 +1,4 @@
-// Copyright 2015-2024 Bleemeo
+// Copyright 2015-2025 Bleemeo
 //
 // bleemeo.com an infrastructure monitoring solution in the Cloud
 //
@@ -34,6 +34,7 @@ const (
 	AgentType_vSphereCluster     AgentType = "vsphere_cluster"
 	AgentType_vSphereHost        AgentType = "vsphere_host"
 	AgentType_vSphereVM          AgentType = "vsphere_vm"
+	AgentType_Application        AgentType = "application"
 )
 
 type DisconnectionReason int
