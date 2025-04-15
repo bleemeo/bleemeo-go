@@ -42,7 +42,7 @@ func makeMetricMockHandler(t *testing.T, availableResources int) mockHandler {
 	makeResults := func(page, pageSize int) []json.RawMessage {
 		results := make([]json.RawMessage, pageSize)
 
-		for i := 0; i < pageSize; i++ {
+		for i := range pageSize {
 			results[i] = json.RawMessage(fmt.Sprintf(`{"id": %d}`, (page-1)*pageSize+i+1))
 		}
 
