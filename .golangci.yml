@@ -1,71 +1,66 @@
+version: "2"
 run:
-  go: "1.19"
+  go: "1.23"
   timeout: 5m
 
 linters:
-  enable-all: true
+  default: all
   disable:
-    # Base linters disabled for all projects.
+    - cyclop # We use maintidx to lint function complexity.
+    - exhaustruct
     - funlen
-    - mnd  # Too picky. For example it says that 1000 (used in number of ms in one second) is a magic number.
-    - exhaustruct # Same as above.
-    - gci # Conflicts with gofumpt.
-    - varnamelen # I think there is too many false-positive.
-    - ireturn # Complain that interface A implementation method return an interface B... it's a requirement of interface A that is unavoidable.
-    - nonamedreturns # Warn for every named return, not useful.
+    - gocognit # We use maintidx to lint function complexity.
+    - gocyclo # We use maintidx to lint function complexity.
     - interfacebloat # Warn when an interface has too many methods, not useful.
-    # Deprecated and replaced linter.
-    - tenv
-    # We use maintidx to lint function complexity.
-    - gocyclo
-    - cyclop
-    - gocognit
-    # Project specific disable.
+    - ireturn # Complain that interface A implementation method return an interface B... it's a requirement of interface A that is unavoidable.
+    - mnd # Too picky. For example, it says that 1000 (used in number of ms in one second) is a magic number.
+    - nonamedreturns # Warn for every named return, not useful.
     - testpackage
-
-linters-settings:
-  nolintlint:
-    # Require nolint directives to mention the specific linter being suppressed.
-    require-specific: true
-
-  tagliatelle:
-    # Check struct tag name case.
-    case:
-      # Use the struct field name to check the name of the struct tag.
+    - varnamelen # I think there are too many false-positives.
+  settings:
+    depguard:
       rules:
-        json: snake
-        yaml: snake
-
-  depguard:
+        main:
+          deny:
+            - pkg: io/ioutil
+              desc: ioutil is deprecated starting with Go 1.16
+    errorlint:
+      errorf-multi: false
+    forbidigo:
+      exclude-godoc-examples: true
+    nolintlint:
+      require-specific: true
+    tagliatelle:
+      case:
+        rules:
+          json: snake
+          yaml: snake
+    revive:
+      rules:
+        - name: package-comments
+          disabled: true
+  exclusions:
+    generated: lax
+    presets:
+      - common-false-positives
+      - std-error-handling
     rules:
-      main:
-        deny:
-          - pkg: "io/ioutil"
-            desc: "ioutil is deprecated starting with Go 1.16"
-
-  errorlint:
-    errorf-multi: false # Prior to Go1.20, fmt.Errorf can only wrap a single error
-
-  forbidigo:
-    exclude-godoc-examples: true
+      - linters:
+          - paralleltest
+        text: does not use range value in test Run
+    paths:
+      - doc.go # Ain't no code in here
 
 issues:
-  exclude-dirs-use-default: false # Exclusion of the 'examples' dir may be the cause of ignoring all issues.
-  exclude-files:
-    - doc.go # Ain't no code in here
-  exclude-rules:
-    # False positive: https://github.com/kunwardeep/paralleltest/issues/8.
-    - linters:
-        - paralleltest
-      text: "does not use range value in test Run"
-
-  include: # the ids of default excluded to include
-    - EXC0005 # ineffective break statement
-    - EXC0009 # create files/directories with minimum permissions
-    - EXC0011 # should have a package comment|comment should be of the form
-    - EXC0012 # exported var/functions should have a comment
-    - EXC0013 # package comment should be of the form
-    - EXC0014 # comment on exported var should be of the form
-
   max-issues-per-linter: 0
   max-same-issues: 0
+
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - doc.go # Ain't no code in here
