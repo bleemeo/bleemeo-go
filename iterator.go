@@ -19,6 +19,7 @@ package bleemeo
 import (
 	"context"
 	"encoding/json"
+	"iter"
 	"net/http"
 	"net/url"
 )
@@ -38,6 +39,9 @@ type Iterator interface {
 	At() json.RawMessage
 	// Err returns the last error that occurred during iteration, if any.
 	Err() error
+	// All returns an iterator over all the selected resources.
+	// Note that the iterator will stop if any error is encountered.
+	All(ctx context.Context) iter.Seq[json.RawMessage]
 }
 
 func newIterator(c *Client, resource Resource, params url.Values) *iterator {
@@ -94,6 +98,20 @@ func (iter *iterator) At() json.RawMessage {
 
 func (iter *iterator) Err() error {
 	return iter.err
+}
+
+func (iter *iterator) All(ctx context.Context) iter.Seq[json.RawMessage] {
+	return func(yield func(json.RawMessage) bool) {
+		for iter.Next(ctx) {
+			if !yield(iter.At()) {
+				return
+			}
+
+			if iter.err != nil {
+				return
+			}
+		}
+	}
 }
 
 func (iter *iterator) fetchPage(ctx context.Context) (ok bool) {

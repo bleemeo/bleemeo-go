@@ -121,7 +121,7 @@ func makeClientMockForIteration(
 	return client, requestCounter
 }
 
-func TestIterator(t *testing.T) {
+func TestIterator(t *testing.T) { //nolint: maintidx
 	t.Parallel()
 
 	t.Run("normal iteration", func(t *testing.T) {
@@ -307,5 +307,50 @@ func TestIterator(t *testing.T) {
 		client.Iterator(ResourceMetric, url.Values{}).At()
 
 		t.Fatal("Expected Iterator.At() to panic")
+	})
+
+	t.Run("iteration using iter.Seq", func(t *testing.T) {
+		t.Parallel()
+
+		const totalResources = 15 // the page size is set to 5
+
+		client, requestCounter := makeClientMockForIteration(t, makeMetricMockHandler(t, totalResources))
+		iter := client.Iterator(ResourceMetric, url.Values{"page_size": {"5"}})
+		objectsCount := 0
+
+		type retObject struct {
+			ID int `json:"id"`
+		}
+
+		for rawObj := range iter.All(context.Background()) {
+			objectsCount++
+
+			var retOjb retObject
+
+			err := json.Unmarshal(rawObj, &retOjb)
+			if err != nil {
+				t.Fatalf("Failed to unmarshal returned object %q: %v", iter.At(), err)
+			}
+
+			if retOjb.ID != objectsCount {
+				t.Fatalf("Invalid returned object %+v: want ID=%d", retOjb, objectsCount)
+			}
+		}
+
+		if err := iter.Err(); err != nil {
+			t.Fatal("Iterator error:", err)
+		}
+
+		if objectsCount != totalResources {
+			t.Fatalf("Expected %d objects, got %d", totalResources, objectsCount)
+		}
+
+		expectedRequests := map[string]int{
+			tokenPath:     1,
+			"/v1/metric/": 3,
+		}
+		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
+			t.Fatalf("Unexpected requests (-want +got):\n%s", diff)
+		}
 	})
 }
