@@ -274,6 +274,7 @@ func TestAuthentication(t *testing.T) { //nolint:maintidx
 			TokenType:    "Bearer",
 			RefreshToken: firstRefreshTk,
 			Expiry:       time.Now().Add(tokenValidity),
+			ExpiresIn:    int64(tokenValidity.Seconds()),
 		}
 		cmpOpts := cmp.Options{cmpopts.IgnoreUnexported(oauth2.Token{}), cmpopts.EquateApproxTime(time.Minute)}
 
