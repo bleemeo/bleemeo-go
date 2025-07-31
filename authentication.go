@@ -38,8 +38,9 @@ type (
 )
 
 type userAgentTransporter struct {
-	userAgentHeader string
 	http.RoundTripper
+
+	userAgentHeader string
 }
 
 func (t userAgentTransporter) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -57,8 +58,8 @@ func wrapTransportWithUserAgent(client *http.Client, userAgentHeader string) *ht
 	}
 
 	c.Transport = userAgentTransporter{
-		userAgentHeader: userAgentHeader,
 		RoundTripper:    initialTransport,
+		userAgentHeader: userAgentHeader,
 	}
 
 	return &c

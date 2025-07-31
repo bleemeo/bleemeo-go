@@ -105,6 +105,7 @@ func (apiErr *APIError) Unwrap() error {
 // An AuthError holds an error due to unspecified or invalid credentials.
 type AuthError struct {
 	*APIError
+
 	// ErrorCode is RFC 6749's 'error' parameter.
 	ErrorCode string
 }
@@ -124,6 +125,7 @@ func (authErr *AuthError) Unwrap() error {
 // A ThrottleError is returned when the API received too much requests from the client.
 type ThrottleError struct {
 	*APIError
+
 	Delay time.Duration
 }
 
