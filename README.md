@@ -4,7 +4,7 @@ Go library for interacting with the Bleemeo API
 
 ## Requirements
 
-- Go1.23 or later
+- Go1.24 or later
 - An account on [Bleemeo](https://bleemeo.com/)
 
 ## Installation
