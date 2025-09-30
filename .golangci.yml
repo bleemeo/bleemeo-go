@@ -1,6 +1,6 @@
 version: "2"
 run:
-  go: "1.23"
+  go: "1.24"
   timeout: 5m
 
 linters:
@@ -11,7 +11,6 @@ linters:
     - funlen
     - gocognit # We use maintidx to lint function complexity.
     - gocyclo # We use maintidx to lint function complexity.
-    - interfacebloat # Warn when an interface has too many methods, not useful.
     - ireturn # Complain that interface A implementation method return an interface B... it's a requirement of interface A that is unavoidable.
     - mnd # Too picky. For example, it says that 1000 (used in number of ms in one second) is a magic number.
     - noinlineerr # Why couldn't we inline errors ?
