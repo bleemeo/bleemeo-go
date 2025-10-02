@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//nolint: gofmt,gofumpt,goimports
+//nolint: gofmt,gofumpt,goimports,godoclint
 package bleemeo
 
 type AgentType string

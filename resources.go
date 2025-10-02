@@ -55,6 +55,7 @@ const (
 	ResourcePublicStatusPage      Resource = "v1/publicstatuspage/"
 	ResourceRecordingRule         Resource = "v1/recordingrule/"
 	ResourceReport                Resource = "v1/report/"
+	ResourceReportConfig          Resource = "v1/reportconfig/"
 	ResourceServerGroup           Resource = "v1/servergroup/"
 	ResourceService               Resource = "v1/service/"
 	ResourceSession               Resource = "v1/session/"
