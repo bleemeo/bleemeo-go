@@ -62,6 +62,7 @@ fi
 docker run --rm -v "$(pwd)":/app ${GO_MOUNT_CACHE} -e HOME=/go/pkg \
    -e GOOS=linux -e GOARCH=amd64 -w /app golangci/golangci-lint:${LINTER_VERSION} \
    bash -ec "
+   mkdir -p /go/pkg
    git config --global --add safe.directory /app
    golangci-lint run
    "
