@@ -30,6 +30,7 @@ const (
 	ResourceApplication           Resource = "v1/application/"
 	ResourceAuditLog              Resource = "v1/auditlog/"
 	ResourceAWSIntegration        Resource = "v1/awsintegration/"
+	ResourceConfig                Resource = "v1/config/"
 	ResourceContactsGroup         Resource = "v1/contactsgroup/"
 	ResourceContainer             Resource = "v1/container/"
 	ResourceDashboard             Resource = "v1/dashboard/"
