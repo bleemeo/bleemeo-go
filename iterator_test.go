@@ -61,10 +61,10 @@ func makeMetricMockHandler(t *testing.T, availableResources int) mockHandler {
 			}
 		}
 
-		if q.Has("page_size") {
-			pageSize, err = strconv.Atoi(q.Get("page_size"))
+		if q.Has(paramPageSize) {
+			pageSize, err = strconv.Atoi(q.Get(paramPageSize))
 			if err != nil {
-				return 0, nil, fmt.Errorf("cannot parse page size %q: %w", q.Get("page_size"), err)
+				return 0, nil, fmt.Errorf("cannot parse page size %q: %w", q.Get(paramPageSize), err)
 			}
 		} else {
 			t.Fatal("No page size provided (the default one should be present at least)")
@@ -103,8 +103,8 @@ func makeClientMockForIteration(
 	clientMock := &http.Client{
 		Transport: &transportMock{
 			handlers: map[string]mockHandler{
-				tokenPath:     authMockHandler,
-				"/v1/metric/": metricHandler,
+				tokenPath:      authMockHandler,
+				metricMockPath: metricHandler,
 			},
 			counters: requestCounter,
 		},
@@ -130,7 +130,7 @@ func TestIterator(t *testing.T) { //nolint: maintidx
 		const totalResources = 15 // the page size is set to 5
 
 		client, requestCounter := makeClientMockForIteration(t, makeMetricMockHandler(t, totalResources))
-		iter := client.Iterator(ResourceMetric, url.Values{"page_size": {"5"}})
+		iter := client.Iterator(ResourceMetric, url.Values{paramPageSize: {"5"}})
 		objectsCount := 0
 
 		type retObject struct {
@@ -161,8 +161,8 @@ func TestIterator(t *testing.T) { //nolint: maintidx
 		}
 
 		expectedRequests := map[string]int{
-			tokenPath:     1,
-			"/v1/metric/": 3,
+			tokenPath:      1,
+			metricMockPath: 3,
 		}
 		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
 			t.Fatalf("Unexpected requests (-want +got):\n%s", diff)
@@ -192,8 +192,8 @@ func TestIterator(t *testing.T) { //nolint: maintidx
 		}
 
 		expectedRequests := map[string]int{
-			tokenPath:     1, // only one call, thanks to the initial refresh token
-			"/v1/metric/": 1,
+			tokenPath:      1, // only one call, thanks to the initial refresh token
+			metricMockPath: 1,
 		}
 		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
 			t.Fatalf("Unexpected requests (-want +got):\n%s", diff)
@@ -220,7 +220,7 @@ func TestIterator(t *testing.T) { //nolint: maintidx
 		}
 
 		expectedError := &APIError{
-			ReqPath:    "/v1/metric/",
+			ReqPath:    metricMockPath,
 			StatusCode: 500,
 			Message:    "500 Internal Server Error",
 		}
@@ -233,8 +233,8 @@ func TestIterator(t *testing.T) { //nolint: maintidx
 		}
 
 		expectedRequests := map[string]int{
-			tokenPath:     1,
-			"/v1/metric/": 1,
+			tokenPath:      1,
+			metricMockPath: 1,
 		}
 		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
 			t.Fatalf("Unexpected requests (-want +got):\n%s", diff)
@@ -280,8 +280,8 @@ func TestIterator(t *testing.T) { //nolint: maintidx
 		}
 
 		expectedRequests := map[string]int{
-			tokenPath:     1,
-			"/v1/metric/": 1,
+			tokenPath:      1,
+			metricMockPath: 1,
 		}
 		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
 			t.Fatalf("Unexpected requests (-want +got):\n%s", diff)
@@ -315,7 +315,7 @@ func TestIterator(t *testing.T) { //nolint: maintidx
 		const totalResources = 15 // the page size is set to 5
 
 		client, requestCounter := makeClientMockForIteration(t, makeMetricMockHandler(t, totalResources))
-		iter := client.Iterator(ResourceMetric, url.Values{"page_size": {"5"}})
+		iter := client.Iterator(ResourceMetric, url.Values{paramPageSize: {"5"}})
 		objectsCount := 0
 
 		type retObject struct {
@@ -346,8 +346,8 @@ func TestIterator(t *testing.T) { //nolint: maintidx
 		}
 
 		expectedRequests := map[string]int{
-			tokenPath:     1,
-			"/v1/metric/": 3,
+			tokenPath:      1,
+			metricMockPath: 3,
 		}
 		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
 			t.Fatalf("Unexpected requests (-want +got):\n%s", diff)

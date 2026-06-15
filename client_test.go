@@ -37,7 +37,7 @@ func makeClientMockForDo(t *testing.T, handler mockHandler) (c *Client, requestC
 	clientMock := &http.Client{
 		Transport: &transportMock{
 			handlers: map[string]mockHandler{
-				"/v1/resource/": handler,
+				resourceMockPath: handler,
 			},
 			counters: requestCounter,
 		},
@@ -100,7 +100,7 @@ func TestClientDo(t *testing.T) {
 			respBody:       []byte(`{"field": ["Bad usage"]}`),
 			expectedStatus: 400,
 			expectedErr: &APIError{
-				ReqPath:    "/v1/resource/",
+				ReqPath:    resourceMockPath,
 				StatusCode: 400,
 				Message:    "Bad request:\n- field: Bad usage",
 				Response:   []byte(`{"field": ["Bad usage"]}`),
@@ -113,12 +113,12 @@ func TestClientDo(t *testing.T) {
 			expectedStatus: 401,
 			expectedErr: &AuthError{
 				APIError: &APIError{
-					ReqPath:    "/v1/resource/",
+					ReqPath:    resourceMockPath,
 					StatusCode: 401,
-					Message:    "Invalid credentials given.",
+					Message:    invalidCredentialsMsg,
 					Response:   []byte(`{"error": "invalid_grant", "error_description": "Invalid credentials given."}`),
 				},
-				ErrorCode: "invalid_grant",
+				ErrorCode: invalidGrantCode,
 			},
 		},
 		{
@@ -127,10 +127,10 @@ func TestClientDo(t *testing.T) {
 			respBody:       []byte(`{"details": "not found"}`),
 			expectedStatus: 404,
 			expectedErr: &APIError{
-				ReqPath:    "/v1/resource/",
+				ReqPath:    resourceMockPath,
 				StatusCode: 404,
 				Message:    "404 Not Found",
-				Err:        fmt.Errorf("%w: /v1/resource/", ErrResourceNotFound),
+				Err:        fmt.Errorf("%w: %s", ErrResourceNotFound, resourceMockPath),
 				Response:   []byte(`{"details": "not found"}`),
 			},
 		},
@@ -139,7 +139,7 @@ func TestClientDo(t *testing.T) {
 			respStatus:     500,
 			expectedStatus: 500,
 			expectedErr: &APIError{
-				ReqPath:    "/v1/resource/",
+				ReqPath:    resourceMockPath,
 				StatusCode: 500,
 				Message:    "500 Internal Server Error",
 			},
@@ -156,7 +156,7 @@ func TestClientDo(t *testing.T) {
 				return tc.respStatus, tc.respBody, nil
 			})
 
-			statusCode, body, err := client.Do(context.Background(), "", "/v1/resource/", nil, false, nil)
+			statusCode, body, err := client.Do(context.Background(), "", resourceMockPath, nil, false, nil)
 			if statusCode != tc.expectedStatus {
 				t.Fatalf("Expected status code to be %d, got %d", tc.expectedStatus, statusCode)
 			}
@@ -182,7 +182,7 @@ func TestClientDo(t *testing.T) {
 			t.Fatal("Failed to initialize client:", err)
 		}
 
-		statusCode, body, err := client.Do(context.Background(), "", "/v1/resource/", nil, false, nil)
+		statusCode, body, err := client.Do(context.Background(), "", resourceMockPath, nil, false, nil)
 		if statusCode != 200 {
 			t.Fatalf("Expected status code to be 200, got %d", statusCode)
 		}
@@ -192,7 +192,7 @@ func TestClientDo(t *testing.T) {
 		}
 
 		expectedErr := &APIError{
-			ReqPath:    "/v1/resource/",
+			ReqPath:    resourceMockPath,
 			StatusCode: 200,
 			Message:    "failed to read response body",
 			Err:        errUnreadable,
