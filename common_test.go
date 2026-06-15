@@ -24,7 +24,20 @@ import (
 	"net/http"
 )
 
-const httpResponseHeader = "HTTP/1.1 %d %s\r\n\n"
+const (
+	httpResponseHeader = "HTTP/1.1 %d %s\r\n\n"
+
+	agentMockPath    = "/v1/agent/<id>/"
+	metricMockPath   = "/v1/metric/"
+	resourceMockPath = "/v1/resource/"
+
+	invalidGrantCode      = "invalid_grant"
+	invalidCredentialsMsg = "Invalid credentials given." //nolint:gosec // Test error message, not credentials.
+
+	proxyEndpoint    = "http://my-proxy.internal"
+	testClientSecret = "53CR37"
+	testAccountID    = "eea5c1dd-2edf-47b2-9ef6-7b239e16a5c3"
+)
 
 var errMockHandlerNotFound = errors.New("mock handler not found")
 
@@ -48,7 +61,7 @@ func (tm *transportMock) RoundTrip(req *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 
-	respData := append([]byte(fmt.Sprintf(httpResponseHeader, statusCode, http.StatusText(statusCode))), body...)
+	respData := append(fmt.Appendf(nil, httpResponseHeader, statusCode, http.StatusText(statusCode)), body...)
 
 	return http.ReadResponse(bufio.NewReader(bytes.NewReader(respData)), req) //nolint:wrapcheck
 }

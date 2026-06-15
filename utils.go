@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"maps"
 	"net/http"
 	"net/url"
 	"strings"
@@ -102,10 +103,7 @@ func minInt(x, y int) int {
 // cloneMap returns a shallow clone of the given map.
 func cloneMap[K comparable, V any](m map[K]V) map[K]V {
 	m2 := make(map[K]V, len(m))
-
-	for k, v := range m {
-		m2[k] = v
-	}
+	maps.Copy(m2, m)
 
 	return m2
 }
@@ -122,11 +120,14 @@ func readBodyStart(body io.Reader) []byte {
 
 // makeBadRequestMessage concatenates all the information contained in the given map.
 func makeBadRequestMessage(m map[string][]string) string {
-	final := ""
+	var sb strings.Builder
 
 	for field, errs := range m {
-		final += "\n- " + field + ": " + strings.Join(errs, " / ")
+		sb.WriteString("\n- ")
+		sb.WriteString(field)
+		sb.WriteString(": ")
+		sb.WriteString(strings.Join(errs, " / "))
 	}
 
-	return final
+	return sb.String()
 }

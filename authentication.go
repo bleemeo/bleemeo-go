@@ -30,7 +30,17 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 )
 
-const tokenPath = "/o/token/"
+const (
+	tokenPath       = "/o/token/"
+	revokeTokenPath = "/o/revoke_token/" //nolint:gosec // Not credentials, just a URL path.
+
+	paramClientID     = "client_id"
+	paramClientSecret = "client_secret"
+	paramGrantType    = "grant_type"
+	paramPassword     = "password"
+	paramRefreshToken = "refresh_token"
+	paramUsername     = "username"
+)
 
 type (
 	tokenProvider  func(ctx context.Context) (*oauth2.Token, error)
@@ -44,7 +54,7 @@ type userAgentTransporter struct {
 }
 
 func (t userAgentTransporter) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Set("User-Agent", t.userAgentHeader)
+	req.Header.Set(headerUserAgent, t.userAgentHeader)
 
 	return t.RoundTripper.RoundTrip(req) //nolint:wrapcheck
 }
@@ -135,9 +145,9 @@ func credentialsTokenProvider(
 		ClientSecret: clientSecret,
 		TokenURL:     endpointURL.JoinPath(tokenPath).String(),
 		EndpointParams: url.Values{
-			"grant_type": {"password"},
-			"username":   {username},
-			"password":   {password},
+			paramGrantType: {paramPassword},
+			paramUsername:  {username},
+			paramPassword:  {password},
 		},
 		AuthStyle: oauth2.AuthStyleInParams,
 	}
@@ -238,19 +248,19 @@ func (ap *authenticationProvider) logout(ctx context.Context, endpoint string) e
 		return fmt.Errorf("can't parse endpoint URL: %w", err)
 	}
 
-	reqURL, err := endpointURL.Parse("/o/revoke_token/")
+	reqURL, err := endpointURL.Parse(revokeTokenPath)
 	if err != nil {
 		return fmt.Errorf("can't parse logout URL: %w", err)
 	}
 
 	values := url.Values{
-		"client_id":       {ap.clientID},
-		"token_type_hint": {"refresh_token"},
+		paramClientID:     {ap.clientID},
+		"token_type_hint": {paramRefreshToken},
 		"token":           {ap.token.RefreshToken},
 	}
 
 	if ap.clientSecret != "" {
-		values.Set("client_secret", ap.clientSecret)
+		values.Set(paramClientSecret, ap.clientSecret)
 	}
 
 	// Revoking the refresh token will also revoke the related access token

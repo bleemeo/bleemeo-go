@@ -38,6 +38,8 @@ const (
 	defaultUserAgent     = "Bleemeo Go Client"
 	// If the throttle delay is less than this, automatically retry the requests.
 	defaultThrottleMaxAutoRetryDelay = time.Minute
+
+	headerUserAgent = "User-Agent"
 )
 
 // Client is a helper to interact with the Bleemeo API,
@@ -73,7 +75,7 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 		endpoint:                  defaultEndpoint,
 		oAuthClientID:             defaultOAuthClientID,
 		client:                    new(http.Client),
-		headers:                   map[string]string{"User-Agent": defaultUserAgent},
+		headers:                   map[string]string{headerUserAgent: defaultUserAgent},
 		throttleMaxAutoRetryDelay: defaultThrottleMaxAutoRetryDelay,
 	}
 
@@ -142,7 +144,7 @@ func (c *Client) GetPage(
 ) (ResultsPage, error) {
 	params = cloneMap(params) // avoid mutation of given params
 	params.Set("page", strconv.Itoa(page))
-	params.Set("page_size", strconv.Itoa(pageSize))
+	params.Set(paramPageSize, strconv.Itoa(pageSize))
 
 	_, resp, err := c.Do(ctx, http.MethodGet, resource, params, true, nil)
 	if err != nil {

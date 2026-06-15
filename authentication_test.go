@@ -41,9 +41,9 @@ func makeClientMockForAuth(
 	clientMock := &http.Client{
 		Transport: &transportMock{
 			handlers: map[string]mockHandler{
-				tokenPath:          authHandler,
-				"/o/revoke_token/": revokeHandler,
-				"/v1/agent/<id>/": func(r *http.Request) (statusCode int, body []byte, err error) {
+				tokenPath:       authHandler,
+				revokeTokenPath: revokeHandler,
+				agentMockPath: func(r *http.Request) (statusCode int, body []byte, err error) {
 					authHeader := r.Header.Get("Authorization")
 
 					if !strings.HasPrefix(authHeader, "Bearer ") {
@@ -99,14 +99,14 @@ func TestAuthentication(t *testing.T) { //nolint:maintidx
 				accessToken, refreshToken string
 			)
 
-			switch reqBodyValues.Get("grant_type") {
-			case "password":
+			switch reqBodyValues.Get(paramGrantType) {
+			case paramPassword:
 				expectedReqBody = url.Values{
-					"client_id":     {clientID},
-					"client_secret": {clientSecret},
-					"grant_type":    {"password"},
-					"password":      {password},
-					"username":      {username},
+					paramClientID:     {clientID},
+					paramClientSecret: {clientSecret},
+					paramGrantType:    {paramPassword},
+					paramPassword:     {password},
+					paramUsername:     {username},
 				}
 
 				tokens, ok := map[int][2]string{
@@ -118,26 +118,26 @@ func TestAuthentication(t *testing.T) { //nolint:maintidx
 				}
 
 				accessToken, refreshToken = tokens[0], tokens[1]
-			case "refresh_token":
+			case paramRefreshToken:
 				expectedReqBody = url.Values{
-					"client_id":     {clientID},
-					"client_secret": {clientSecret},
-					"grant_type":    {"refresh_token"},
-					"refresh_token": {firstRefreshTk},
+					paramClientID:     {clientID},
+					paramClientSecret: {clientSecret},
+					paramGrantType:    {paramRefreshToken},
+					paramRefreshToken: {firstRefreshTk},
 				}
 				accessToken = secondAccessTk
 				refreshToken = secondRefreshTk
 			default:
-				t.Fatalf("Unexpected grant type %v", reqBodyValues["grant_type"])
+				t.Fatalf("Unexpected grant type %v", reqBodyValues[paramGrantType])
 			}
 
 			if diff := cmp.Diff(expectedReqBody, reqBodyValues); diff != "" {
 				t.Fatalf("Unexpected request body (-want +got):\n%s", diff)
 			}
 
-			return http.StatusOK, []byte(fmt.Sprintf(
+			return http.StatusOK, fmt.Appendf(nil,
 				`{"access_token": "%s", "expires_in": %d, "token_type": "Bearer", "scope": "read write", "refresh_token": "%s"}`,
-				accessToken, int(tokenValidity.Seconds()), refreshToken)), nil
+				accessToken, int(tokenValidity.Seconds()), refreshToken), nil
 		}
 		revokeHandler := func(*http.Request) (statusCode int, body []byte, err error) {
 			revokeCallsCount++
@@ -195,9 +195,9 @@ func TestAuthentication(t *testing.T) { //nolint:maintidx
 		}
 
 		expectedRequests := map[string]int{
-			tokenPath:          2,
-			"/o/revoke_token/": 2,
-			"/v1/agent/<id>/":  2,
+			tokenPath:       2,
+			revokeTokenPath: 2,
+			agentMockPath:   2,
 		}
 		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
 			t.Fatalf("Unexpected requests:\n%s", diff)
@@ -229,27 +229,27 @@ func TestAuthentication(t *testing.T) { //nolint:maintidx
 				accessToken, refreshToken string
 			)
 
-			switch reqBodyValues.Get("grant_type") {
-			case "refresh_token":
+			switch reqBodyValues.Get(paramGrantType) {
+			case paramRefreshToken:
 				expectedReqBody = url.Values{
-					"client_id":     {clientID},
-					"client_secret": {clientSecret},
-					"grant_type":    {"refresh_token"},
-					"refresh_token": {initialRefresh},
+					paramClientID:     {clientID},
+					paramClientSecret: {clientSecret},
+					paramGrantType:    {paramRefreshToken},
+					paramRefreshToken: {initialRefresh},
 				}
 				accessToken = firstAccessTk
 				refreshToken = firstRefreshTk
 			default:
-				t.Fatalf("Unexpected grant type %v", reqBodyValues["grant_type"])
+				t.Fatalf("Unexpected grant type %v", reqBodyValues[paramGrantType])
 			}
 
 			if diff := cmp.Diff(expectedReqBody, reqBodyValues); diff != "" {
 				t.Fatalf("Unexpected request body (-want +got):\n%s", diff)
 			}
 
-			return http.StatusOK, []byte(fmt.Sprintf(
+			return http.StatusOK, fmt.Appendf(nil,
 				`{"access_token": "%s", "expires_in": %d, "token_type": "Bearer", "scope": "read write", "refresh_token": "%s"}`,
-				accessToken, int(tokenValidity.Seconds()), refreshToken)), nil
+				accessToken, int(tokenValidity.Seconds()), refreshToken), nil
 		}
 		revokeHandler := func(*http.Request) (statusCode int, body []byte, err error) {
 			return http.StatusOK, nil, nil
@@ -298,9 +298,9 @@ func TestAuthentication(t *testing.T) { //nolint:maintidx
 		}
 
 		expectedRequests := map[string]int{
-			tokenPath:          1,
-			"/o/revoke_token/": 1,
-			"/v1/agent/<id>/":  1,
+			tokenPath:       1,
+			revokeTokenPath: 1,
+			agentMockPath:   1,
 		}
 		if diff := cmp.Diff(expectedRequests, requestCounter); diff != "" {
 			t.Fatalf("Unexpected requests:\n%s", diff)
@@ -346,18 +346,18 @@ func TestAuthentication(t *testing.T) { //nolint:maintidx
 
 		expectedErr := &AuthError{
 			APIError: &APIError{
-				ReqPath:     "/v1/agent/<id>/",
+				ReqPath:     agentMockPath,
 				StatusCode:  400,
 				ContentType: "",
-				Message:     "Invalid credentials given.",
+				Message:     invalidCredentialsMsg,
 				Err: &oauth2.RetrieveError{
-					ErrorCode:        "invalid_grant",
-					ErrorDescription: "Invalid credentials given.",
+					ErrorCode:        invalidGrantCode,
+					ErrorDescription: invalidCredentialsMsg,
 					Body:             respData,
 				},
 				Response: respData,
 			},
-			ErrorCode: "invalid_grant",
+			ErrorCode: invalidGrantCode,
 		}
 		cmpOpts := cmp.Options{cmpopts.IgnoreFields(oauth2.RetrieveError{}, "Response")}
 
