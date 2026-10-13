@@ -1,6 +1,6 @@
 version: "2"
 run:
-  go: "1.25"
+  go: "1.26"
   timeout: 5m
 
 linters:
@@ -8,9 +8,11 @@ linters:
   disable:
     - cyclop # We use maintidx to lint function complexity.
     - exhaustruct
+    - exhaustruct_v5
     - funlen
     - gocognit # We use maintidx to lint function complexity.
     - gocyclo # We use maintidx to lint function complexity.
+    - gomodguard # Superseded by gomodguard_v2
     - ireturn # Complain that interface A implementation method return an interface B... it's a requirement of interface A that is unavoidable.
     - mnd # Too picky. For example, it says that 1000 (used in number of ms in one second) is a magic number.
     - noinlineerr # Why couldn't we inline errors ?
