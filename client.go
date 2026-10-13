@@ -365,19 +365,8 @@ func (c *Client) doWithErrorHandling(ctx context.Context, req *http.Request, aut
 
 		switch resp.StatusCode {
 		case http.StatusBadRequest:
-			var respBody map[string][]string
-
-			err = json.Unmarshal(bodyStart, &respBody)
-			if err != nil {
-				apiErr.Err = &JSONUnmarshalError{
-					&jsonError{
-						Err:      err,
-						DataKind: JsonErrorDataKind_400Details,
-						Data:     bodyStart,
-					},
-				}
-			} else {
-				apiErr.Message = "Bad request:" + makeBadRequestMessage(respBody)
+			if msg := makeBadRequestMessage(bodyStart); msg != "" {
+				apiErr.Message = "Bad request:" + msg
 			}
 		case http.StatusUnauthorized:
 			return resp.StatusCode, nil, buildAuthErrorFromBody(&apiErr)

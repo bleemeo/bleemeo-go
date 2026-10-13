@@ -19,11 +19,16 @@ package bleemeo
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"reflect"
+	"strconv"
 	"time"
 )
 
 const errorRespMaxLength = 1 << 20 // 1MB
+
+// errorBodyMaxLength is the maximum length of a non-decoded response body included in an error message.
+const errorBodyMaxLength = 512
 
 var (
 	// ErrTokenIsRefreshOnly is returned when trying to request a new token,
@@ -44,7 +49,11 @@ type JSONErrorDataKind int
 
 //nolint: gofmt,gofumpt,goimports
 const (
+	// Deprecated: 400 response bodies are no longer decoded into a fixed structure,
+	// so this kind is never returned.
 	JsonErrorDataKind_400Details JSONErrorDataKind = iota
+	// Deprecated: 401 response bodies that aren't valid JSON are used as-is in the error message,
+	// so this kind is never returned.
 	JsonErrorDataKind_401Details
 	JsonErrorDataKind_404Details
 	JsonErrorDataKind_ResultPage
@@ -80,18 +89,20 @@ type APIError struct {
 	Response []byte
 }
 
+// Error returns the message of the error, which is expected to be self-explanatory
+// regarding the status code (e.g. "Bad request: ..." or "404 Not Found").
+// The status code is only used when there is no message.
 func (apiErr *APIError) Error() string {
-	var errStr string
-
-	if apiErr.StatusCode != 0 {
-		errStr += fmt.Sprint(apiErr.StatusCode, " - ")
-	}
-
-	if apiErr.Message != "" {
-		errStr += apiErr.Message
+	errStr := apiErr.Message
+	if errStr == "" {
+		errStr = statusString(apiErr.StatusCode)
 	}
 
 	if apiErr.Err != nil {
+		if errStr == "" {
+			return apiErr.Err.Error()
+		}
+
 		errStr += " (" + apiErr.Err.Error() + ")"
 	}
 
@@ -110,12 +121,25 @@ type AuthError struct {
 	ErrorCode string
 }
 
+// Error returns the message of the error, prefixed by the status code
+// since the message alone doesn't tell whether it was a 400 or a 401.
 func (authErr *AuthError) Error() string {
-	if authErr.Err != nil {
-		return "authentication error: " + authErr.Err.Error()
+	errStr := "authentication error"
+
+	status := statusString(authErr.StatusCode)
+	if status != "" {
+		errStr += ": " + status
 	}
 
-	return "authentication error: " + authErr.APIError.Error()
+	if authErr.Message != "" && authErr.Message != status {
+		errStr += ": " + authErr.Message
+	}
+
+	if authErr.Err != nil {
+		errStr += " (" + authErr.Err.Error() + ")"
+	}
+
+	return errStr
 }
 
 func (authErr *AuthError) Unwrap() error {
@@ -195,4 +219,18 @@ func (unmarshalErr *JSONUnmarshalError) Is(other error) bool {
 	}
 
 	return false
+}
+
+// statusString returns the given status code followed by its text (e.g. "404 Not Found"),
+// or an empty string if the status code is zero.
+func statusString(statusCode int) string {
+	if statusCode == 0 {
+		return ""
+	}
+
+	if text := http.StatusText(statusCode); text != "" {
+		return strconv.Itoa(statusCode) + " " + text
+	}
+
+	return strconv.Itoa(statusCode)
 }

@@ -19,11 +19,13 @@ package bleemeo
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"maps"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 )
 
@@ -118,16 +120,83 @@ func readBodyStart(body io.Reader) []byte {
 	return content
 }
 
-// makeBadRequestMessage concatenates all the information contained in the given map.
-func makeBadRequestMessage(m map[string][]string) string {
+// makeBadRequestMessage builds a human-readable message from the body of a 400 response.
+// The API usually returns a map of field to errors (e.g. {"field": ["error"]}),
+// but it may also return a list of errors, a single string or nested structures.
+// If the body isn't valid JSON, its (truncated) content is used as-is.
+// An empty string is returned when the body holds no information.
+func makeBadRequestMessage(body []byte) string {
+	var content any
+
+	if err := json.Unmarshal(body, &content); err != nil {
+		text := truncatedBody(body)
+		if text == "" {
+			return ""
+		}
+
+		return " " + text
+	}
+
 	var sb strings.Builder
 
-	for field, errs := range m {
-		sb.WriteString("\n- ")
-		sb.WriteString(field)
-		sb.WriteString(": ")
-		sb.WriteString(strings.Join(errs, " / "))
+	switch value := content.(type) {
+	case map[string]any:
+		for _, field := range slices.Sorted(maps.Keys(value)) {
+			sb.WriteString("\n- ")
+			sb.WriteString(field)
+			sb.WriteString(": ")
+			sb.WriteString(formatBadRequestValue(value[field]))
+		}
+	case []any:
+		for _, item := range value {
+			sb.WriteString("\n- ")
+			sb.WriteString(formatBadRequestValue(item))
+		}
+	case nil:
+		return ""
+	default:
+		sb.WriteString(" ")
+		sb.WriteString(formatBadRequestValue(value))
 	}
 
 	return sb.String()
+}
+
+// truncatedBody returns the given response body as a trimmed string,
+// truncated to errorBodyMaxLength to be included in an error message.
+func truncatedBody(body []byte) string {
+	text := strings.TrimSpace(string(body))
+	if len(text) > errorBodyMaxLength {
+		text = strings.ToValidUTF8(text[:errorBodyMaxLength], "") + "..."
+	}
+
+	return text
+}
+
+// formatBadRequestValue formats a decoded JSON value from a 400 response on a single line.
+func formatBadRequestValue(value any) string {
+	switch v := value.(type) {
+	case string:
+		return v
+	case []any:
+		items := make([]string, 0, len(v))
+
+		for _, item := range v {
+			items = append(items, formatBadRequestValue(item))
+		}
+
+		return strings.Join(items, ", ")
+	case map[string]any:
+		items := make([]string, 0, len(v))
+
+		for _, key := range slices.Sorted(maps.Keys(v)) {
+			items = append(items, key+": "+formatBadRequestValue(v[key]))
+		}
+
+		return "{" + strings.Join(items, ", ") + "}"
+	case nil:
+		return "null"
+	default:
+		return fmt.Sprint(v)
+	}
 }

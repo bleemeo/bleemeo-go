@@ -322,12 +322,8 @@ func buildAuthErrorFromBody(apiErr *APIError) error {
 	}
 
 	if err := json.Unmarshal(apiErr.Response, &respData); err != nil {
-		authErr.Err = &JSONUnmarshalError{
-			&jsonError{
-				Err:      err,
-				DataKind: JsonErrorDataKind_401Details,
-				Data:     apiErr.Response,
-			},
+		if text := truncatedBody(apiErr.Response); text != "" {
+			authErr.Message = text
 		}
 
 		return &authErr
@@ -342,7 +338,9 @@ func buildAuthErrorFromBody(apiErr *APIError) error {
 	case respData.Detail != "":
 		authErr.Message = respData.Detail
 	default:
-		authErr.Message = string(apiErr.Response)
+		if text := truncatedBody(apiErr.Response); text != "" {
+			authErr.Message = text
+		}
 	}
 
 	return &authErr
