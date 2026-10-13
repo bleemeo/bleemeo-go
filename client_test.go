@@ -107,6 +107,40 @@ func TestClientDo(t *testing.T) {
 			},
 		},
 		{
+			name:           "bad request with list of errors",
+			respStatus:     400,
+			respBody:       []byte(`["Bad usage", "Other error"]`),
+			expectedStatus: 400,
+			expectedErr: &APIError{
+				ReqPath:    resourceMockPath,
+				StatusCode: 400,
+				Message:    "Bad request:\n- Bad usage\n- Other error",
+				Response:   []byte(`["Bad usage", "Other error"]`),
+			},
+		},
+		{
+			name:           "bad request with non-JSON body",
+			respStatus:     400,
+			respBody:       []byte("Invalid request\n"),
+			expectedStatus: 400,
+			expectedErr: &APIError{
+				ReqPath:    resourceMockPath,
+				StatusCode: 400,
+				Message:    "Bad request: Invalid request",
+				Response:   []byte("Invalid request\n"),
+			},
+		},
+		{
+			name:           "bad request with empty body",
+			respStatus:     400,
+			expectedStatus: 400,
+			expectedErr: &APIError{
+				ReqPath:    resourceMockPath,
+				StatusCode: 400,
+				Message:    "400 Bad Request",
+			},
+		},
+		{
 			name:           "unauthorized",
 			respStatus:     401,
 			respBody:       []byte(`{"error": "invalid_grant", "error_description": "Invalid credentials given."}`),
@@ -119,6 +153,20 @@ func TestClientDo(t *testing.T) {
 					Response:   []byte(`{"error": "invalid_grant", "error_description": "Invalid credentials given."}`),
 				},
 				ErrorCode: invalidGrantCode,
+			},
+		},
+		{
+			name:           "unauthorized with non-JSON body",
+			respStatus:     401,
+			respBody:       []byte("Unauthorized\n"),
+			expectedStatus: 401,
+			expectedErr: &AuthError{
+				APIError: &APIError{
+					ReqPath:    resourceMockPath,
+					StatusCode: 401,
+					Message:    "Unauthorized",
+					Response:   []byte("Unauthorized\n"),
+				},
 			},
 		},
 		{

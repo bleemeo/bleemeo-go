@@ -23,6 +23,7 @@ import (
 	"io"
 	"net"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -130,6 +131,72 @@ func TestUnmarshalResponse(t *testing.T) {
 
 			if !errors.Is(err, tc.expectedErr) {
 				t.Fatalf("Expected the error to be %v, but got %v", tc.expectedErr, err)
+			}
+		})
+	}
+}
+
+func TestMakeBadRequestMessage(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		body     string
+		expected string
+	}{
+		{
+			name:     "map of lists",
+			body:     `{"name": ["Too long", "Invalid"], "id": ["Required"]}`,
+			expected: "\n- id: Required\n- name: Too long, Invalid",
+		},
+		{
+			name:     "list of strings",
+			body:     `["First error", "Second error"]`,
+			expected: "\n- First error\n- Second error",
+		},
+		{
+			name:     "map of string",
+			body:     `{"detail": "Something went wrong"}`,
+			expected: "\n- detail: Something went wrong",
+		},
+		{
+			name:     "nested",
+			body:     `{"labels": [{"name": ["Required"]}, {}], "config": {"value": ["Invalid"], "count": 3}}`,
+			expected: "\n- config: {count: 3, value: Invalid}\n- labels: {name: Required}, {}",
+		},
+		{
+			name:     "string",
+			body:     `"Bad usage"`,
+			expected: " Bad usage",
+		},
+		{
+			name:     "JSON null",
+			body:     `null`,
+			expected: "",
+		},
+		{
+			name:     "empty",
+			body:     "",
+			expected: "",
+		},
+		{
+			name:     "not JSON",
+			body:     "  <html>Bad Request</html>\n",
+			expected: " <html>Bad Request</html>",
+		},
+		{
+			name:     "not JSON truncated",
+			body:     strings.Repeat("a", errorBodyMaxLength+10),
+			expected: " " + strings.Repeat("a", errorBodyMaxLength) + "...",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := makeBadRequestMessage([]byte(tc.body)); got != tc.expected {
+				t.Fatalf("Expected %q, got %q", tc.expected, got)
 			}
 		})
 	}
